@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="data-base" content="data">
+  <title>전국 지자체 행정조직 현황</title>
+  <meta name="description" content="전국 243개 지자체 행정기구 조직 현황 — 지자체별·정책분야별·기구유형별 조회 및 검색">
+  <link rel="stylesheet" href="assets/app.css">
+  <script type="module" src="assets/app.js"></script>
+  <style>[x-cloak]{display:none!important}</style>
+</head>
+<body>
+<div x-data="mainApp" x-init="init()" x-cloak>
+
+  <!-- ── 헤더 ────────────────────────────────────────────── -->
+  <header class="header">
+    <a class="brand" href="#/" @click.prevent="navigate('/')">🏛 전국 지자체 행정조직</a>
+
+    <nav class="header-nav">
+      <a :class="{active: view==='overview'}" href="#/" @click.prevent="navigate('/')">전국 개요</a>
+      <a :class="{active: view==='region'}"   href="#/region" @click.prevent="navigate('/region')">지자체별</a>
+      <a :class="{active: view==='keyword'}"  href="#/keyword/복지" @click.prevent="navigate('/keyword/복지')">정책분야별</a>
+      <a :class="{active: view==='compare'}"  href="#/compare" @click.prevent="navigate('/compare')">광역 비교</a>
+      <a :class="{active: view==='types'}"    href="#/types" @click.prevent="navigate('/types')">기구유형별</a>
+    </nav>
+
+    <div class="search-wrap" @click.outside="searchOpen=false">
+      <input class="search-input" type="search" placeholder="지자체·기구명 검색…"
+        x-model="searchQuery"
+        @input.debounce.300ms="onSearch()"
+        @focus="searchQuery && (searchOpen=true)"
+        @keydown.escape="searchOpen=false">
+      <div class="search-results" x-show="searchOpen && searchResults.length">
+        <template x-for="r in searchResults" :key="r.id">
+          <div class="search-item" @click="gotoResult(r)">
+            <div class="search-main">
+              <span class="search-region" x-text="r.region_name"></span>
+              <template x-if="r.parent_name">
+                <span class="search-sep"> › <span x-text="r.parent_name"></span></span>
+              </template>
+              <span class="search-sep"> › </span>
+              <strong x-text="r.unit_name"></strong>
+              <span class="type-badge" :class="'badge-'+r.unit_type" x-text="r.unit_type"></span>
+            </div>
+            <div class="search-excerpt" x-text="r.분장사무_summary?.slice(0,60)"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── 본문 ────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- ════ 전국 개요 ════ -->
+    <div x-show="view==='overview'">
+      <div class="stats-bar">
+        <div class="stat"><span x-text="index.length"></span>개 지자체</div>
+        <div class="stat"><span x-text="totalUnits.toLocaleString()"></span>개 행정기구</div>
+        <div class="stat">광역정원 <span x-text="totalStaff.toLocaleString()"></span>명</div>
+      </div>
+
+      <!-- 광역 카드 -->
+      <div class="section-title">광역자치단체</div>
+      <div class="region-grid">
+        <template x-for="r in gwangyeok" :key="r.code">
+          <div class="region-card" @click="navigate('/region/'+r.code)">
+            <div class="card-name" x-text="r.name"></div>
+            <div class="card-meta">
+              <span x-text="r.기구수+'개 기구'"></span>
+              <span x-text="r.정원.toLocaleString()+'명'"></span>
+            </div>
+            <div class="kw-dots">
+              <template x-for="kw in kwOrder" :key="kw">
+                <span x-show="r.키워드_분포?.[kw]" class="kw-dot" :class="'kw-'+kw" :title="kw+' ('+r.키워드_분포?.[kw]+')'"></span>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- 기초 목록 -->
+      <div class="section-title" style="margin-top:2rem">
+        기초자치단체
+        <select class="inline-select" x-model="gicheoFilterParent">
+          <option value="">— 광역 선택 —</option>
+          <template x-for="r in gwangyeok" :key="r.code">
+            <option :value="r.code" x-text="r.name"></option>
+          </template>
+        </select>
+      </div>
+      <div class="gicheo-grid">
+        <template x-for="r in filteredGicheo" :key="r.code">
+          <div class="gicheo-card" @click="navigate('/region/'+r.code)">
+            <span class="gicheo-name" x-text="r.short_name"></span>
+            <span class="gicheo-meta" x-text="r.기구수+'개'"></span>
+          </div>
+        </template>
+      </div>
+
+      <!-- 정책분야별 막대그래프 -->
+      <div class="section-title" style="margin-top:2rem">정책분야별 행정기구 수 (전국)</div>
+      <div class="kw-bars">
+        <template x-for="kw in kwOrder" :key="kw">
+          <div class="kw-bar-row" @click="navigate('/keyword/'+kw)" title="정책분야별 보기">
+            <div class="kw-bar-label" x-text="kw"></div>
+            <div class="kw-bar-wrap">
+              <div class="kw-bar" :class="'kw-bg-'+kw"
+                :style="'width:'+((aggregates?.['전국_키워드별']?.[kw]||0)/maxKwCount*100)+'%'">
+              </div>
+              <span class="kw-bar-val" x-text="(aggregates?.['전국_키워드별']?.[kw]||0).toLocaleString()"></span>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div><!-- /overview -->
+
+
+    <!-- ════ 지자체별 트리 ════ -->
+    <div x-show="view==='region'">
+      <template x-if="!selectedRegion && !loading">
+        <div class="empty-state">지자체를 선택하세요. <a href="#/" @click.prevent="navigate('/')">← 전국 개요</a></div>
+      </template>
+
+      <template x-if="selectedRegion">
+        <div>
+          <div class="region-header">
+            <h2 x-text="selectedRegion.region.name"></h2>
+            <span class="tag" x-text="selectedRegion.region.type"></span>
+            <span class="tag" x-show="selectedRegion.totals?.정원_총">
+              총정원 <strong x-text="(selectedRegion.totals?.정원_총||0).toLocaleString()+'명'"></strong>
+            </span>
+            <span class="tag-light" x-show="selectedRegion.totals?.정원_비고" x-text="selectedRegion.totals?.정원_비고"></span>
+          </div>
+
+          <!-- 산하 기초 (광역일 때) -->
+          <template x-if="selectedRegion.region.level==='광역' && childRegions.length">
+            <div>
+              <div class="section-title">산하 기초자치단체 (<span x-text="childRegions.length"></span>)</div>
+              <div class="gicheo-grid">
+                <template x-for="r in childRegions" :key="r.code">
+                  <div class="gicheo-card" @click="navigate('/region/'+r.code)">
+                    <span class="gicheo-name" x-text="r.short_name"></span>
+                    <span class="gicheo-meta" x-text="r.기구수+'개'"></span>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- 조직 트리 + 상세 패널 -->
+          <div class="tree-layout">
+            <div class="tree-panel">
+              <template x-for="unit in selectedRegion.structure" :key="unit.id">
+                <div class="tree-item">
+                  <!-- 상위기구 행 -->
+                  <div class="tree-row" :class="{selected: selectedUnit?.id===unit.id, ['tree-type-'+unit.type]: true}"
+                    @click="selectUnit(unit, null)">
+                    <span class="tree-toggle" x-show="unit.children?.length" @click.stop="unit._open=!unit._open">
+                      <span x-text="unit._open?'▾':'▸'"></span>
+                    </span>
+                    <span class="tree-toggle-placeholder" x-show="!unit.children?.length"></span>
+                    <span class="type-badge" :class="'badge-'+unit.type" x-text="unit.type"></span>
+                    <span class="unit-name" :class="{bold: ['국','실','본부','단'].includes(unit.type)}" x-text="unit.name"></span>
+                    <span class="child-count" x-show="unit.children?.length" x-text="unit.children.length"></span>
+                  </div>
+                  <!-- 하위기구 -->
+                  <div x-show="unit._open">
+                    <template x-for="child in unit.children" :key="child.id">
+                      <div class="tree-row child-row" :class="{selected: selectedUnit?.id===child.id}"
+                        @click="selectUnit(child, unit)">
+                        <span class="child-indent">└</span>
+                        <span class="type-badge" :class="'badge-'+child.type" x-text="child.type"></span>
+                        <span class="unit-name" x-text="child.name"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div><!-- /tree-panel -->
+
+            <!-- 상세 패널 -->
+            <div class="detail-panel" :class="{visible: !!selectedUnit}">
+              <template x-if="selectedUnit">
+                <div>
+                  <div class="detail-title">
+                    <span class="type-badge lg" :class="'badge-'+selectedUnit.type" x-text="selectedUnit.type"></span>
+                    <h3 x-text="selectedUnit.name"></h3>
+                  </div>
+                  <div class="detail-meta">
+                    <template x-if="selectedParentUnit">
+                      <span class="meta-item">소속: <strong x-text="selectedParentUnit.name"></strong></span>
+                    </template>
+                    <template x-if="selectedUnit.head_position">
+                      <span class="meta-item">장: <span x-text="selectedUnit.head_position"></span></span>
+                    </template>
+                    <template x-if="selectedUnit.head_grade">
+                      <span class="meta-item">직급: <span x-text="selectedUnit.head_grade"></span></span>
+                    </template>
+                    <template x-if="selectedUnit.근거조문">
+                      <span class="meta-item">근거: <span x-text="selectedUnit.근거조문"></span></span>
+                    </template>
+                  </div>
+                  <div class="detail-kws" x-show="selectedUnit.키워드_태그?.length">
+                    <template x-for="kw in (selectedUnit.키워드_태그||[])" :key="kw">
+                      <span class="kw-chip" :class="'kw-'+kw" @click="navigate('/keyword/'+kw)" x-text="kw"></span>
+                    </template>
+                  </div>
+                  <template x-if="selectedUnit.분장사무_항목?.length">
+                    <div class="detail-duties">
+                      <div class="duties-label">소관사무</div>
+                      <ol>
+                        <template x-for="(item, i) in selectedUnit.분장사무_항목" :key="i">
+                          <li x-text="item"></li>
+                        </template>
+                      </ol>
+                    </div>
+                  </template>
+                  <template x-if="!selectedUnit.분장사무_항목?.length && selectedUnit.분장사무_원문">
+                    <div class="detail-duties">
+                      <div class="duties-label">소관사무 (원문)</div>
+                      <p class="raw-text" x-text="selectedUnit.분장사무_원문.slice(0,800)+(selectedUnit.분장사무_원문.length>800?'…':'')"></p>
+                    </div>
+                  </template>
+                </div>
+              </template>
+              <template x-if="!selectedUnit">
+                <div class="detail-empty">← 기구를 클릭하면 상세 정보가 표시됩니다</div>
+              </template>
+            </div>
+          </div><!-- /tree-layout -->
+        </div>
+      </template>
+    </div><!-- /region -->
+
+
+    <!-- ════ 정책분야별 ════ -->
+    <div x-show="view==='keyword'">
+      <div class="kw-tabs">
+        <template x-for="kw in kwOrder" :key="kw">
+          <button class="kw-tab" :class="{active: currentKeyword===kw, ['kw-'+kw]: true}"
+            @click="navigate('/keyword/'+kw)" x-text="kw"></button>
+        </template>
+      </div>
+      <template x-if="currentKeyword">
+        <div class="kw-content">
+          <div class="kw-header">
+            <h2>
+              <span class="kw-chip" :class="'kw-'+currentKeyword" x-text="currentKeyword"></span>
+              관련 행정기구
+              <span class="count-badge" x-text="filteredKwUnits.length+'개'"></span>
+            </h2>
+            <input class="filter-input" type="text" placeholder="기구명·지자체 필터…" x-model="kwFilter">
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>광역</th><th>지자체</th><th>유형</th><th>상위기구</th><th>기구명</th><th>직급</th><th>소관사무 요약</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="u in filteredKwUnits" :key="u.unit_id">
+                  <tr class="clickable" @click="navigate('/region/'+u.region_code)">
+                    <td x-text="getGwangyeokName(u.region_code)"></td>
+                    <td x-text="u.region_name.split(' ').slice(-1)[0]"></td>
+                    <td><span class="type-badge" :class="'badge-'+u.unit_type" x-text="u.unit_type"></span></td>
+                    <td x-text="u.parent_name"></td>
+                    <td class="name-cell" x-text="u.unit_name"></td>
+                    <td x-text="u.head_grade"></td>
+                    <td class="summary-cell" x-text="u.분장사무_summary?.slice(0,70)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+    </div><!-- /keyword -->
+
+
+    <!-- ════ 광역 비교 ════ -->
+    <div x-show="view==='compare'" class="compare-view">
+      <h2>광역자치단체 행정기구 비교</h2>
+      <div class="compare-filters">
+        <span class="filter-label">기구유형 선택:</span>
+        <template x-for="t in typeOrder" :key="t">
+          <label class="check-label">
+            <input type="checkbox" :value="t" x-model="compareTypes">
+            <span class="type-badge" :class="'badge-'+t" x-text="t"></span>
+          </label>
+        </template>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table compare-table">
+          <thead>
+            <tr>
+              <th>광역</th>
+              <th>총정원</th>
+              <template x-for="t in compareTypes" :key="t">
+                <th x-text="t"></th>
+              </template>
+              <th>전체</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="gw in (aggregates?.광역||[])" :key="gw.code">
+              <tr class="clickable" @click="navigate('/region/'+gw.code)">
+                <td x-text="gw.name"></td>
+                <td x-text="gw.정원.toLocaleString()"></td>
+                <template x-for="t in compareTypes" :key="t">
+                  <td x-text="gw.기구유형별?.[t]||0"></td>
+                </template>
+                <td x-text="Object.values(gw.기구유형별||{}).reduce((a,b)=>a+b,0)"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div><!-- /compare -->
+
+
+    <!-- ════ 기구유형별 ════ -->
+    <div x-show="view==='types'" class="types-view">
+      <h2>기구유형별 조회</h2>
+      <p class="help-text">유형을 선택하면 전국 모든 해당 기구가 표시됩니다. (검색 인덱스 로드 필요)</p>
+      <div class="type-chips">
+        <template x-for="t in typeOrder" :key="t">
+          <button class="type-chip" :class="{active: selectedType===t, ['badge-'+t]: true}"
+            @click="selectType(t)" x-text="t"></button>
+        </template>
+      </div>
+      <template x-if="selectedType && searchDocs">
+        <div>
+          <h3>
+            <span class="type-badge lg" :class="'badge-'+selectedType" x-text="selectedType"></span>
+            기구 — 전국 <span x-text="filteredByType.length.toLocaleString()+'개'"></span>
+          </h3>
+          <div class="types-grid">
+            <template x-for="u in filteredByType" :key="u.id">
+              <div class="type-card" @click="navigate('/region/'+u.region_code)">
+                <div class="type-card-name" x-text="u.unit_name"></div>
+                <div class="type-card-meta">
+                  <span x-text="u.region_name.split(' ').slice(-1)[0]"></span>
+                  <template x-if="u.parent_name">
+                    <span class="type-card-parent" x-text="'← '+u.parent_name"></span>
+                  </template>
+                  <template x-if="u.head_grade">
+                    <span class="type-card-grade" x-text="u.head_grade"></span>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+      <template x-if="selectedType && !searchDocs && loading">
+        <div class="loading-msg">데이터 로딩 중…</div>
+      </template>
+    </div><!-- /types -->
+
+  </main><!-- /main -->
+
+  <!-- 로딩 오버레이 -->
+  <div class="loading-overlay" x-show="loading" x-cloak>
+    <div class="spinner"></div>
+  </div>
+
+</div><!-- /mainApp -->
+</body>
+</html>

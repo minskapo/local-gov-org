@@ -1,0 +1,344 @@
+/* ── CSS 변수 ──────────────────────────────────────────── */
+:root {
+  --clr-primary: #1E3A5F;
+  --clr-primary-lt: #2563EB;
+  --clr-bg: #F8FAFC;
+  --clr-card: #FFFFFF;
+  --clr-border: #CBD5E1;
+  --clr-text: #1E293B;
+  --clr-muted: #64748B;
+  --clr-accent: #3B82F6;
+  --hdr-h: 56px;
+  --radius: 8px;
+
+  /* 기구유형 배지 색상 (엑셀 팔레트와 일치) */
+  --c-국: #DBEAFE; --c-국-t: #1E40AF;
+  --c-실: #F3E8FF; --c-실-t: #6B21A8;
+  --c-본부: #FEF9C3; --c-본부-t: #854D0E;
+  --c-단: #FFEDD5; --c-단-t: #9A3412;
+  --c-관: #DCFCE7; --c-관-t: #166534;
+  --c-처: #FEE2E2; --c-처-t: #991B1B;
+  --c-담당관: #FDF4FF; --c-담당관-t: #701A75;
+  --c-직속기관: #F1F5F9; --c-직속기관-t: #334155;
+  --c-과: #FFFFFF; --c-과-t: #374151;
+
+  /* 정책분야 색상 */
+  --c-kw-기후:    #A7F3D0;
+  --c-kw-환경:    #BBF7D0;
+  --c-kw-에너지:  #FEF08A;
+  --c-kw-녹지_생태: #86EFAC;
+  --c-kw-교통:    #BAE6FD;
+  --c-kw-복지:    #FBCFE8;
+  --c-kw-재난_안전: #FED7AA;
+  --c-kw-도시_건축: #E0E7FF;
+  --c-kw-경제_산업: #FEF3C7;
+  --c-kw-행정_기획: #F1F5F9;
+  --c-kw-문화_교육: #FCE7F3;
+  --c-kw-보건_위생: #D1FAE5;
+}
+
+/* ── 리셋 ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+       background: var(--clr-bg); color: var(--clr-text); font-size: 14px; }
+a { color: var(--clr-accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { cursor: pointer; font: inherit; }
+
+/* ── 헤더 ──────────────────────────────────────────────── */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  height: var(--hdr-h); background: var(--clr-primary);
+  display: flex; align-items: center; gap: 1rem; padding: 0 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,.3);
+}
+.brand { color: #fff; font-size: 1rem; font-weight: 700; white-space: nowrap; }
+.brand:hover { text-decoration: none; opacity: .85; }
+
+.header-nav { display: flex; gap: .25rem; flex-shrink: 0; }
+.header-nav a {
+  color: rgba(255,255,255,.75); padding: .35rem .65rem; border-radius: 4px;
+  font-size: .85rem; white-space: nowrap;
+}
+.header-nav a.active, .header-nav a:hover { background: rgba(255,255,255,.15); color: #fff; }
+
+.search-wrap { position: relative; flex: 1; max-width: 400px; }
+.search-input {
+  width: 100%; padding: .4rem .75rem; border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.1);
+  color: #fff; font-size: .9rem; outline: none;
+}
+.search-input::placeholder { color: rgba(255,255,255,.5); }
+.search-input:focus { background: rgba(255,255,255,.2); border-color: rgba(255,255,255,.5); }
+
+.search-results {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: #fff; border: 1px solid var(--clr-border); border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,.15); max-height: 480px; overflow-y: auto; z-index: 200;
+}
+.search-item { padding: .6rem .8rem; cursor: pointer; border-bottom: 1px solid var(--clr-border); }
+.search-item:last-child { border-bottom: none; }
+.search-item:hover { background: #F0F9FF; }
+.search-main { font-size: .85rem; color: var(--clr-text); }
+.search-region { color: var(--clr-muted); font-size: .8rem; }
+.search-sep { color: var(--clr-muted); }
+.search-excerpt { font-size: .78rem; color: var(--clr-muted); margin-top: 2px; }
+
+/* ── 본문 ──────────────────────────────────────────────── */
+.main { padding: 1.25rem 1.5rem; max-width: 1400px; margin: 0 auto; }
+
+/* ── 섹션 제목 ──────────────────────────────────────────── */
+.section-title {
+  font-size: .8rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--clr-muted);
+  margin: 1.25rem 0 .6rem; display: flex; align-items: center; gap: .5rem;
+}
+.inline-select {
+  font-size: .8rem; padding: .2rem .4rem; border: 1px solid var(--clr-border);
+  border-radius: 4px; background: #fff;
+}
+
+/* ── 통계바 ─────────────────────────────────────────────── */
+.stats-bar {
+  display: flex; gap: 1.5rem; padding: .75rem 1rem;
+  background: var(--clr-primary); border-radius: var(--radius);
+  margin-bottom: 1.5rem; color: #fff;
+}
+.stat { font-size: .9rem; }
+.stat span { font-size: 1.3rem; font-weight: 700; margin-right: .2rem; }
+
+/* ── 광역 카드 그리드 ────────────────────────────────────── */
+.region-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .75rem;
+}
+.region-card {
+  background: #fff; border: 1px solid var(--clr-border); border-radius: var(--radius);
+  padding: .8rem 1rem; cursor: pointer; transition: box-shadow .15s, transform .1s;
+}
+.region-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.12); transform: translateY(-1px); }
+.card-name { font-size: .9rem; font-weight: 600; margin-bottom: .3rem; }
+.card-meta { font-size: .78rem; color: var(--clr-muted); display: flex; gap: .5rem; }
+.kw-dots { display: flex; flex-wrap: wrap; gap: 3px; margin-top: .5rem; }
+.kw-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ── 기초 지자체 그리드 ──────────────────────────────────── */
+.gicheo-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: .4rem;
+}
+.gicheo-card {
+  background: #fff; border: 1px solid var(--clr-border); border-radius: 6px;
+  padding: .45rem .6rem; cursor: pointer; display: flex; justify-content: space-between;
+  align-items: center; font-size: .82rem;
+}
+.gicheo-card:hover { background: #EFF6FF; border-color: var(--clr-accent); }
+.gicheo-name { font-weight: 500; }
+.gicheo-meta { font-size: .72rem; color: var(--clr-muted); }
+
+/* ── 정책분야 막대그래프 ──────────────────────────────────── */
+.kw-bars { display: flex; flex-direction: column; gap: .35rem; max-width: 700px; }
+.kw-bar-row {
+  display: flex; align-items: center; gap: .6rem; cursor: pointer; border-radius: 4px; padding: .15rem .25rem;
+}
+.kw-bar-row:hover { background: rgba(0,0,0,.03); }
+.kw-bar-label { width: 90px; font-size: .8rem; color: var(--clr-text); text-align: right; flex-shrink: 0; }
+.kw-bar-wrap { flex: 1; display: flex; align-items: center; gap: .4rem; }
+.kw-bar { height: 16px; border-radius: 3px; min-width: 4px; transition: width .4s; }
+.kw-bar-val { font-size: .75rem; color: var(--clr-muted); flex-shrink: 0; }
+
+/* ── 지역 헤더 ──────────────────────────────────────────── */
+.region-header {
+  display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; flex-wrap: wrap;
+}
+.region-header h2 { font-size: 1.3rem; }
+.tag {
+  background: var(--clr-primary); color: #fff; font-size: .75rem;
+  padding: .2rem .5rem; border-radius: 12px;
+}
+.tag-light { font-size: .72rem; color: var(--clr-muted); }
+
+/* ── 트리 레이아웃 ──────────────────────────────────────── */
+.tree-layout { display: flex; gap: 1rem; align-items: flex-start; }
+.tree-panel { flex: 0 0 380px; min-width: 0; border: 1px solid var(--clr-border); border-radius: var(--radius); overflow-y: auto; max-height: calc(100vh - 120px); }
+.tree-item { }
+.tree-row {
+  display: flex; align-items: center; gap: .4rem; padding: .4rem .6rem;
+  cursor: pointer; border-bottom: 1px solid var(--clr-border); min-height: 36px;
+}
+.tree-row:hover { background: #F0F9FF; }
+.tree-row.selected { background: #DBEAFE; }
+.tree-toggle { width: 16px; text-align: center; font-size: .8rem; color: var(--clr-muted); flex-shrink: 0; }
+.tree-toggle-placeholder { width: 16px; flex-shrink: 0; }
+.child-row { padding-left: 1.4rem; background: #FAFAFA; }
+.child-row:hover { background: #F0F9FF; }
+.child-indent { color: var(--clr-muted); font-size: .75rem; }
+.unit-name { font-size: .85rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.unit-name.bold { font-weight: 600; }
+.child-count { font-size: .72rem; color: var(--clr-muted); background: var(--clr-bg); border-radius: 10px; padding: 0 .35rem; }
+
+/* ── 상세 패널 ──────────────────────────────────────────── */
+.detail-panel {
+  flex: 1; border: 1px solid var(--clr-border); border-radius: var(--radius);
+  padding: 1rem; background: #fff; min-height: 300px; max-height: calc(100vh - 120px); overflow-y: auto;
+}
+.detail-empty { color: var(--clr-muted); font-size: .85rem; padding: 2rem; text-align: center; }
+.detail-title { display: flex; align-items: center; gap: .5rem; margin-bottom: .75rem; }
+.detail-title h3 { font-size: 1.1rem; }
+.detail-meta { display: flex; flex-wrap: wrap; gap: .5rem .75rem; margin-bottom: .75rem; }
+.meta-item { font-size: .82rem; color: var(--clr-muted); }
+.meta-item strong { color: var(--clr-text); }
+.detail-kws { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .75rem; }
+.detail-source { font-size: .8rem; color: var(--clr-muted); margin-bottom: .5rem; }
+.detail-source .label { font-weight: 600; }
+.detail-duties { margin-top: .75rem; }
+.duties-label { font-size: .8rem; font-weight: 700; color: var(--clr-muted); margin-bottom: .4rem; text-transform: uppercase; letter-spacing: .04em; }
+.detail-duties ol { padding-left: 1.2rem; }
+.detail-duties li { font-size: .84rem; margin-bottom: .3rem; line-height: 1.5; }
+.raw-text { font-size: .8rem; color: var(--clr-muted); line-height: 1.6; white-space: pre-wrap; }
+
+/* ── 배지 (기구유형) ────────────────────────────────────── */
+.type-badge {
+  display: inline-block; font-size: .7rem; padding: .1rem .35rem; border-radius: 4px;
+  white-space: nowrap; font-weight: 600; flex-shrink: 0;
+}
+.type-badge.lg { font-size: .8rem; padding: .15rem .45rem; }
+.badge-국      { background: var(--c-국);      color: var(--c-국-t); }
+.badge-실      { background: var(--c-실);      color: var(--c-실-t); }
+.badge-본부    { background: var(--c-본부);    color: var(--c-본부-t); }
+.badge-단      { background: var(--c-단);      color: var(--c-단-t); }
+.badge-관      { background: var(--c-관);      color: var(--c-관-t); }
+.badge-처      { background: var(--c-처);      color: var(--c-처-t); }
+.badge-담당관  { background: var(--c-담당관);  color: var(--c-담당관-t); }
+.badge-직속기관{ background: var(--c-직속기관);color: var(--c-직속기관-t); }
+.badge-과      { background: var(--c-과); border: 1px solid #e2e8f0; color: var(--c-과-t); }
+
+/* ── 정책분야 칩·점·배경 ───────────────────────────────── */
+.kw-chip {
+  display: inline-block; padding: .15rem .5rem; border-radius: 12px; font-size: .75rem;
+  font-weight: 600; cursor: pointer; border: 1px solid rgba(0,0,0,.1);
+}
+.kw-chip:hover { opacity: .8; }
+.kw-기후      { background: var(--c-kw-기후); }
+.kw-환경      { background: var(--c-kw-환경); }
+.kw-에너지    { background: var(--c-kw-에너지); }
+.kw-녹지_생태 { background: var(--c-kw-녹지_생태); }
+.kw-교통      { background: var(--c-kw-교통); }
+.kw-복지      { background: var(--c-kw-복지); }
+.kw-재난_안전 { background: var(--c-kw-재난_안전); }
+.kw-도시_건축 { background: var(--c-kw-도시_건축); }
+.kw-경제_산업 { background: var(--c-kw-경제_산업); }
+.kw-행정_기획 { background: var(--c-kw-행정_기획); }
+.kw-문화_교육 { background: var(--c-kw-문화_교육); }
+.kw-보건_위생 { background: var(--c-kw-보건_위생); }
+
+.kw-dot { background: currentColor; }
+.kw-bg-기후      { background: var(--c-kw-기후); }
+.kw-bg-환경      { background: var(--c-kw-환경); }
+.kw-bg-에너지    { background: var(--c-kw-에너지); }
+.kw-bg-녹지_생태 { background: var(--c-kw-녹지_생태); }
+.kw-bg-교통      { background: var(--c-kw-교통); }
+.kw-bg-복지      { background: var(--c-kw-복지); }
+.kw-bg-재난_안전 { background: var(--c-kw-재난_안전); }
+.kw-bg-도시_건축 { background: var(--c-kw-도시_건축); }
+.kw-bg-경제_산업 { background: var(--c-kw-경제_산업); }
+.kw-bg-행정_기획 { background: var(--c-kw-행정_기획); }
+.kw-bg-문화_교육 { background: var(--c-kw-문화_교육); }
+.kw-bg-보건_위생 { background: var(--c-kw-보건_위생); }
+
+.kw-dot.kw-기후      { background: var(--c-kw-기후); }
+.kw-dot.kw-환경      { background: var(--c-kw-환경); }
+.kw-dot.kw-에너지    { background: var(--c-kw-에너지); }
+.kw-dot.kw-녹지_생태 { background: var(--c-kw-녹지_생태); }
+.kw-dot.kw-교통      { background: var(--c-kw-교통); }
+.kw-dot.kw-복지      { background: var(--c-kw-복지); }
+.kw-dot.kw-재난_안전 { background: var(--c-kw-재난_안전); }
+.kw-dot.kw-도시_건축 { background: var(--c-kw-도시_건축); }
+.kw-dot.kw-경제_산업 { background: var(--c-kw-경제_산업); }
+.kw-dot.kw-행정_기획 { background: var(--c-kw-행정_기획); }
+.kw-dot.kw-문화_교육 { background: var(--c-kw-문화_교육); }
+.kw-dot.kw-보건_위생 { background: var(--c-kw-보건_위생); }
+
+/* ── 정책분야별 탭 ──────────────────────────────────────── */
+.kw-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.kw-tab {
+  padding: .3rem .7rem; border-radius: 16px; border: 1px solid rgba(0,0,0,.1);
+  font-size: .8rem; font-weight: 600; background: #eee;
+}
+.kw-tab.active { outline: 2px solid var(--clr-primary); }
+.kw-content { }
+.kw-header { display: flex; align-items: center; gap: 1rem; margin-bottom: .75rem; flex-wrap: wrap; }
+.kw-header h2 { font-size: 1.1rem; display: flex; align-items: center; gap: .4rem; }
+.count-badge { font-size: .85rem; font-weight: 400; color: var(--clr-muted); }
+.filter-input {
+  padding: .35rem .65rem; border: 1px solid var(--clr-border); border-radius: 6px;
+  font-size: .85rem; outline: none; width: 220px;
+}
+.filter-input:focus { border-color: var(--clr-accent); }
+
+/* ── 테이블 ─────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.data-table th {
+  background: var(--clr-primary); color: #fff; padding: .5rem .6rem;
+  text-align: left; white-space: nowrap; position: sticky; top: 0;
+}
+.data-table td { padding: .45rem .6rem; border-bottom: 1px solid var(--clr-border); vertical-align: middle; }
+.data-table tr.clickable:hover td { background: #EFF6FF; cursor: pointer; }
+.name-cell { font-weight: 500; }
+.summary-cell { color: var(--clr-muted); max-width: 260px; }
+
+/* ── 광역 비교 ──────────────────────────────────────────── */
+.compare-view h2 { margin-bottom: .75rem; }
+.compare-filters { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: 1rem; }
+.filter-label { font-size: .82rem; color: var(--clr-muted); }
+.check-label { display: flex; align-items: center; gap: .25rem; cursor: pointer; font-size: .82rem; }
+.compare-table td, .compare-table th { text-align: center; }
+.compare-table td:first-child, .compare-table th:first-child { text-align: left; }
+
+/* ── 기구유형별 ─────────────────────────────────────────── */
+.types-view h2 { margin-bottom: .4rem; }
+.help-text { font-size: .82rem; color: var(--clr-muted); margin-bottom: .75rem; }
+.type-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.type-chip {
+  padding: .35rem .75rem; border-radius: 16px; border: 2px solid transparent;
+  font-size: .82rem; font-weight: 600; transition: border-color .1s;
+}
+.type-chip.active { border-color: var(--clr-primary); }
+.types-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .5rem; margin-top: .75rem;
+}
+.type-card {
+  background: #fff; border: 1px solid var(--clr-border); border-radius: 6px;
+  padding: .6rem .8rem; cursor: pointer;
+}
+.type-card:hover { background: #F0F9FF; border-color: var(--clr-accent); }
+.type-card-name { font-size: .85rem; font-weight: 500; margin-bottom: .2rem; }
+.type-card-meta { font-size: .75rem; color: var(--clr-muted); display: flex; gap: .4rem; flex-wrap: wrap; }
+.type-card-parent { color: #94A3B8; }
+.type-card-grade { background: var(--clr-bg); border-radius: 3px; padding: 0 .3rem; }
+
+/* ── 공통 ───────────────────────────────────────────────── */
+.empty-state { padding: 3rem; text-align: center; color: var(--clr-muted); }
+.loading-msg { padding: 2rem; text-align: center; color: var(--clr-muted); }
+.loading-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 999;
+  display: flex; align-items: center; justify-content: center;
+}
+.spinner {
+  width: 40px; height: 40px; border: 4px solid rgba(255,255,255,.4);
+  border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── 모바일 ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .header { flex-wrap: wrap; height: auto; padding: .5rem; gap: .4rem; }
+  .header-nav { order: 3; width: 100%; overflow-x: auto; }
+  .header-nav a { font-size: .75rem; padding: .25rem .5rem; }
+  .search-wrap { order: 2; max-width: none; flex: 1; }
+  .main { padding: .75rem; }
+  .tree-layout { flex-direction: column; }
+  .tree-panel { flex: none; width: 100%; max-height: 45vh; }
+  .detail-panel { max-height: none; }
+  .region-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .gicheo-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+}
