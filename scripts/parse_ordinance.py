@@ -594,8 +594,8 @@ def parse_mapo() -> dict:
             "children": children,
         })
 
-    # 담당관 (조례 제3조② — "부구청장 소속으로 X담당관과 Y담당관을 두고")
-    # 타 지자체와 동일 패턴: type="관", name="담당관" 부모 아래 개별 담당관을 자식으로 구성
+    # 보좌기관 (조례 제3조② — "부구청장 소속으로 X담당관과 Y담당관을 두고")
+    # 타 지자체와 동일 패턴: type="관", name="보좌기관" 부모 아래 개별 보좌기관을 자식으로 구성
     DANGGWAN_RULE_MAP = {
         "새마포담당관": "제3조",
         "감사담당관": "제4조",
@@ -618,7 +618,7 @@ def parse_mapo() -> dict:
         dg_grade = normalize_grade(m_grade.group(1)) if m_grade else ""
         duties = parse_duties(rule_text)
         dg_children.append({
-            "id": build_id(region_code, "담당관", dg_name),
+            "id": build_id(region_code, "보좌기관", dg_name),
             "type": "담당관",
             "name": dg_name,
             "level": 2,
@@ -634,17 +634,17 @@ def parse_mapo() -> dict:
     if dg_children:
         combined_text = " ".join(c["분장사무_원문"] for c in dg_children)
         structure.append({
-            "id": build_id(region_code, "담당관"),
+            "id": build_id(region_code, "보좌기관"),
             "type": "관",
-            "name": "담당관",
+            "name": "보좌기관",
             "level": 1,
-            "head_position": "담당관",
+            "head_position": "보좌기관",
             "head_grade": "",
             "정원": None,
             "근거조문": "조례 제3조②",
             "분장사무_원문": art3_para2,
             "분장사무_항목": [],
-            "키워드_태그": apply_keywords("담당관 " + combined_text),
+            "키워드_태그": apply_keywords("보좌기관 " + combined_text),
             "children": dg_children,
         })
 
@@ -734,7 +734,7 @@ def parse_mapo() -> dict:
 
 # ─── 단양군 파서 ──────────────────────────────────────
 def parse_danyang() -> dict:
-    region_code = "43730"
+    region_code = "33780"
     region_name = "충청북도 단양군"
 
     with open(RAW_DIR / "ordinances/기초/단양군_행정기구설치조례.json", encoding="utf-8") as f:
@@ -760,13 +760,14 @@ def parse_danyang() -> dict:
 
     structure = []
 
-    # 1. 기획예산담당관 (보좌기관)
+    # 1. 보좌기관 — 기획예산담당관 (조례 제3조의2)
+    # 타 지자체와 동일 패턴: type="관", name="보좌기관" 부모 아래 개별 보좌기관을 자식으로 구성
     art3_2_content = get_content(ord_articles.get("제3조의2", {}))
-    structure.append({
-        "id": build_id(region_code, "기획예산담당관"),
+    boja_child = {
+        "id": build_id(region_code, "보좌기관", "기획예산담당관"),
         "type": "담당관",
         "name": "기획예산담당관",
-        "level": 1,
+        "level": 2,
         "head_position": "기획예산담당관",
         "head_grade": "",  # 시행규칙 별표 1 제1호
         "정원": None,
@@ -775,6 +776,20 @@ def parse_danyang() -> dict:
         "분장사무_항목": [],  # 시행규칙 별표 2
         "키워드_태그": apply_keywords("기획예산담당관 " + art3_2_content),
         "children": [],
+    }
+    structure.append({
+        "id": build_id(region_code, "보좌기관"),
+        "type": "관",
+        "name": "보좌기관",
+        "level": 1,
+        "head_position": "보좌기관",
+        "head_grade": "",
+        "정원": None,
+        "근거조문": "조례 제3조의2",
+        "분장사무_원문": "",
+        "분장사무_항목": [],
+        "키워드_태그": apply_keywords("보좌기관 " + art3_2_content),
+        "children": [boja_child],
     })
 
     # 2. 3개 국 (행정복지국·관광건설국·농림환경국)
@@ -903,7 +918,7 @@ def parse_danyang() -> dict:
             "name": region_name,
             "level": "기초",
             "type": "군",
-            "parent": "43",
+            "parent": "33",
         },
         "source": {
             "ordinance": {
@@ -1378,100 +1393,166 @@ def parse_gwangyeok_generic(
                     child["분장사무_항목"] = parse_duties(rt)
                     child["키워드_태그"] = apply_keywords(cname + " " + rt)
 
-    # ── Post 2: 독립 담당관 추출 및 "담당관" 그룹으로 묶기 ──
-    # 이미 파싱된 독립 담당관 수집 (type="담당관" 최상위 단위)
-    existing_standalone_dg = [u for u in structure
-                               if u.get("type") == "담당관" and u.get("level") == 1]
-    # 이미 "담당관" 그룹 있으면 건드리지 않음
-    has_dg_group = any(u["name"] == "담당관" for u in structure)
+    # ── Post 2: 보좌기관 그룹 추출 (담당관·단·과·실·관 통합) ──
+    # 조례의 "보좌기관" 유형 조문에서 단위 명단을 모두 추출하고,
+    # 이미 다른 경로로 파싱된 동명의 level-1 단위가 있으면 그룹 자식으로 흡수한다.
+    # (예: 동작구 — 감사담당관·홍보담당관·핵심정책추진단·운영지원과)
+    _BOSWA_TITLE_RE = re.compile(
+        r"보좌기관|독립.*담당관|국에\s*속하지|국에\s*설치하지"
+    )
+    # 단위명 자체로는 부적합한 일반어
+    _BOSWA_GENERIC = {
+        "보좌기관", "보조기관", "보조·보좌기관", "보좌·보조기관",
+        "행정기관", "보좌관", "보조관", "정책관", "직속기관",
+        "담당관", "단", "과", "실", "관", "보건소", "사업소",
+    }
+    # 우선순위 접미사 (긴 것 먼저: 담당관이 관보다 우선)
+    _BOSWA_SUFFIXES = ("담당관", "단", "실", "과", "관")
 
-    # 이미 structure에 있는 담당관 이름 집합 (type="담당관" 자식 포함)
-    already_dg: set = set()
-    for u in structure:
-        if u.get("type") == "담당관":
-            already_dg.add(u["name"])
-        for c in u.get("children", []):
-            if c.get("type") == "담당관":
-                already_dg.add(c["name"])
+    def _suffix_for(nm: str) -> str:
+        for suf in _BOSWA_SUFFIXES:
+            if nm.endswith(suf):
+                return suf
+        return "관"
 
-    new_dg_names: list = []
-    _BOSWA_PAT = re.compile(r"보좌기관|담당관.*설치|속하지.*아니하는|독립담당관")
+    boja_names: list = []          # 등장 순서 보존
+    boja_seen: set = set()
+    boja_art_ref: str = ""
 
-    # 조례에서: "보좌기관 설치" 유형 조문
     for a in all_ord_arts:
         if a.get("조문여부") != "Y":
             continue
         t = (a.get("조제목", "") or "").strip()
+        if not _BOSWA_TITLE_RE.search(t):
+            continue
         c = get_content(a)
-        if _BOSWA_PAT.search(t) and ("담당관" in c):
-            for nm in re.findall(r"([가-힣]{2,12}담당관)", c):
-                if nm not in already_dg and nm not in new_dg_names:
-                    new_dg_names.append(nm)
+        # "부X장 밑에/소속으로 ... 을/를 둔다" 패턴에서 단위 목록 추출
+        m_list = re.search(
+            r"부\w*[장수]\s*(?:밑에|소속(?:으로)?)\s*(.+?)\s*[을를]\s*둔다",
+            c, re.DOTALL,
+        )
+        chunk = m_list.group(1) if m_list else ""
+        if not chunk:
+            # fallback — 항 번호 직후 ~ "둔다" 사이
+            m_alt = re.search(
+                r"①\s*(.+?)\s*[을를]\s*둔다", c, re.DOTALL
+            )
+            chunk = m_alt.group(1) if m_alt else ""
+        if not chunk:
+            continue
+        # 부속 마크업/괄호/개정 태그 제거
+        chunk = re.sub(r"<[^>]+>|\([^)]*\)", "", chunk)
+        # 한글 접속조사 "과/와"가 단위 사이에 끼어든 경우 분리 (예: "감사담당관과 홍보담당관")
+        chunk = re.sub(
+            r"(?<=[관실단])\s*[과와]\s+(?=[가-힣])", ", ", chunk
+        )
+        # 단위명 토큰화: 한글 묶음으로 끝나는 위 접미사 매칭
+        for tok in re.split(r"\s*[,ㆍ·]\s*|\s+(?:및|또는)\s+|\s{2,}", chunk):
+            tok = tok.strip()
+            if not tok:
+                continue
+            m_unit = re.match(
+                r"^([가-힣]{2,14}(?:담당관|단|실|과|관))$", tok
+            )
+            if not m_unit:
+                continue
+            nm = m_unit.group(1)
+            if nm in _BOSWA_GENERIC:
+                continue
+            if nm not in boja_seen:
+                boja_seen.add(nm)
+                boja_names.append(nm)
+        # 첫 매칭 보좌기관 조문번호 기억
+        if not boja_art_ref:
+            num_raw = a.get("조문번호", "")
+            boja_art_ref = article_num_to_str(num_raw) if num_raw else ""
 
-    # 시행규칙에서: 조제목이 "X담당관"인 개별 조문 (아직 못 잡은 것)
+    # 시행규칙에 단독 담당관 조문이 있는 경우도 흡수 (조례에서 누락된 케이스)
     for t in rule_articles_by_title:
         if re.match(r"^[가-힣]{2,12}담당관$", t):
-            if t not in already_dg and t not in new_dg_names:
-                new_dg_names.append(t)
+            if t not in boja_seen:
+                boja_seen.add(t)
+                boja_names.append(t)
 
-    if not has_dg_group:
-        all_dg = existing_standalone_dg + []  # 기존 독립 담당관 유지용 복사
-        # 기존 독립 담당관 structure에서 제거
-        structure = [u for u in structure if not (
-            u.get("type") == "담당관" and u.get("level") == 1
-        )]
+    # 이미 그룹이 존재하면 (custom 파서 등) 건드리지 않음
+    has_group = any(
+        u.get("name") in ("보좌기관", "담당관")
+        and u.get("type") == "관"
+        and u.get("level") == 1
+        for u in structure
+    )
 
-        # 새로운 담당관 노드 생성
-        for dg_name in new_dg_names:
-            rule_art = rule_articles_by_title.get(dg_name)
-            ord_art = ord_articles_by_title.get(dg_name)
+    if boja_names and not has_group:
+        # 기존 level-1 standalone 단위 중 boja_names에 매칭되는 것을 그룹 자식으로 이동
+        moved: dict = {}
+        kept: list = []
+        for u in structure:
+            if (u.get("level") == 1
+                    and u.get("name") in boja_seen
+                    and not u.get("children")):
+                # children이 없는 단순 leaf만 흡수 (국 본부 등 자식 보유 단위는 별개)
+                moved[u["name"]] = u
+            else:
+                kept.append(u)
+        structure = kept
+
+        children = []
+        for nm in boja_names:
+            if nm in moved:
+                child = moved[nm]
+                child["level"] = 2
+                child["type"] = _suffix_for(nm)
+                child["id"] = build_id(code, "보좌기관", nm)
+                children.append(child)
+                continue
+            # 새로 생성 — 시행규칙 우선, 없으면 조례 본문 활용
+            rule_art = rule_articles_by_title.get(nm)
+            ord_art = ord_articles_by_title.get(nm)
             detail_art = rule_art or ord_art
             rule_text = get_content(detail_art) if detail_art else ""
             m_grade = re.search(
-                r"담당관[은는]\s*(지방행정사무관|지방서기관|지방부이사관|지방이사관|[1-9]급)",
+                r"(?:장|관)[은는]\s*(지방관리관|지방이사관|지방부이사관|"
+                r"지방서기관|지방기술서기관|지방행정사무관|지방기술사무관|"
+                r"지방시설사무관|지방사무관|[1-9]급)",
                 rule_text,
             )
-            dg_grade = _normalize_grade_generic(m_grade.group(1)) if m_grade else ""
+            grade = _normalize_grade_generic(m_grade.group(1)) if m_grade else ""
             num_raw = detail_art.get("조문번호", "") if detail_art else ""
             art_ref = article_num_to_str(num_raw) if num_raw else ""
             src = "시행규칙" if rule_art else "조례"
-            all_dg.append({
-                "id": build_id(code, "담당관", dg_name),
-                "type": "담당관",
-                "name": dg_name,
+            head_pos = nm if nm.endswith("담당관") else nm + "장"
+            children.append({
+                "id": build_id(code, "보좌기관", nm),
+                "type": _suffix_for(nm),
+                "name": nm,
                 "level": 2,
-                "head_position": dg_name,
-                "head_grade": dg_grade,
+                "head_position": head_pos,
+                "head_grade": grade,
                 "정원": None,
                 "근거조문": f"{src} {art_ref}".strip(),
                 "분장사무_원문": rule_text,
                 "분장사무_항목": parse_duties(rule_text),
-                "키워드_태그": apply_keywords(dg_name + " " + rule_text),
+                "키워드_태그": apply_keywords(nm + " " + rule_text),
                 "children": [],
             })
 
-        if all_dg:
-            # 기존 독립 담당관의 level/id/type 재정비
-            for dg in all_dg:
-                dg["level"] = 2
-                dg["type"] = "담당관"
-                if not dg["id"].startswith(f"{code}.담당관."):
-                    dg["id"] = build_id(code, "담당관", dg["name"])
-
-            combined_text = " ".join(c["분장사무_원문"] for c in all_dg if c["분장사무_원문"])
+        if children:
+            combined_text = " ".join(
+                c["분장사무_원문"] for c in children if c["분장사무_원문"]
+            )
             structure.append({
-                "id": build_id(code, "담당관"),
+                "id": build_id(code, "보좌기관"),
                 "type": "관",
-                "name": "담당관",
+                "name": "보좌기관",
                 "level": 1,
-                "head_position": "담당관",
+                "head_position": "보좌기관",
                 "head_grade": "",
                 "정원": None,
-                "근거조문": "조례",
+                "근거조문": f"조례 {boja_art_ref}".strip(),
                 "분장사무_원문": "",
                 "분장사무_항목": [],
-                "키워드_태그": apply_keywords("담당관 " + combined_text),
-                "children": all_dg,
+                "키워드_태그": apply_keywords("보좌기관 " + combined_text),
+                "children": children,
             })
 
     # 직속기관 처리 (절 헤더에서 기관명 추출)
@@ -1685,7 +1766,7 @@ if __name__ == "__main__":
     if "danyang" in targets or not targets:
         print("\n단양군 파싱 중...")
         result = parse_danyang()
-        out_path = PROCESSED_DIR / "43730_단양군.json"
+        out_path = PROCESSED_DIR / "33780_충청북도 단양군.json"
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
         s = result["structure"]
