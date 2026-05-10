@@ -1,0 +1,26 @@
+{
+  "records": [
+    {
+      "law_name": "지방자치법",
+      "law_id": "001656",
+      "mst": "276357",
+      "last_amended": "20260102",
+      "source": "law.go.kr",
+      "fetched_at": "2026-05-09",
+      "raw_file": "data/raw/upper_law/지방자치법_전체.json",
+      "scope": "상위법령 참조 - 제123조~제134조 (행정기구 관련)",
+      "phase": "0.5"
+    },
+    {
+      "law_name": "지방자치단체의 행정기구와 정원기준 등에 관한 규정",
+      "law_id": "005091",
+      "mst": "283183",
+      "last_amended": "20260203",
+      "source": "law.go.kr",
+      "fetched_at": "2026-05-09",
+      "raw_file": "data/raw/upper_law/행정기구정원기준규정_전체.json",
+      "scope": "상위법령 참조 - 본문 49조 + 별표 7개 전체",
+      "phase": "0.5"
+    }
+  ]
+}
