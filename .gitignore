@@ -15,3 +15,6 @@ wheels/
 
 # macOS
 .DS_Store
+
+# Claude Code 세션 메모 (로컬 전용)
+CLAUDE.md
