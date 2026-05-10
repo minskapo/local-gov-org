@@ -5,8 +5,10 @@
 기초명 형식: "서울특별시 마포구" → "마포구" (마지막 단어)
 """
 import json
+import re
 from pathlib import Path
 from openpyxl import Workbook
+from openpyxl.comments import Comment
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
@@ -37,6 +39,27 @@ def short_gicheo(full_name: str) -> str:
     return parts[-1] if len(parts) > 1 else full_name
 
 
+def make_comment(unit: dict):
+    """분장사무_항목 또는 분장사무_원문으로 Excel 메모 생성. 내용 없으면 None."""
+    items = unit.get("분장사무_항목") or []
+    raw   = (unit.get("분장사무_원문") or "").strip()
+
+    if items:
+        text = "\n".join(f"{i+1}. {item}" for i, item in enumerate(items))
+    elif raw:
+        text = re.sub(r"^제\d+조(?:의\d+)?\([^)]{0,120}\)", "", raw).strip()
+    else:
+        return None
+
+    if len(text) > 3000:
+        text = text[:2997] + "…"
+
+    c = Comment(text, "소관사무")
+    c.width  = 320
+    c.height = min(40 + len(items or text.split("\n")) * 18, 400)
+    return c
+
+
 def load_all():
     records = []
     for f in sorted(OUT_DIR.glob("*.json")):
@@ -57,11 +80,16 @@ def get_climate_rows(d):
         name = unit.get("name", "")
         if is_excluded(name):
             continue
-        children = [c.get("name", "") for c in unit.get("children", [])]
+        child_objs = unit.get("children", [])
+        children   = [c.get("name", "") for c in child_objs]
         if is_climate(name):
-            rows.append({"parent": name, "children": children, "climate_parent": True})
+            rows.append({"parent": name, "parent_obj": unit,
+                         "children": children, "child_objs": child_objs,
+                         "climate_parent": True})
         elif any(is_climate(c) for c in children):
-            rows.append({"parent": name, "children": children, "climate_parent": False})
+            rows.append({"parent": name, "parent_obj": unit,
+                         "children": children, "child_objs": child_objs,
+                         "climate_parent": False})
     return rows
 
 
@@ -164,12 +192,19 @@ def main():
             fixed_vals = [code, gwangyeok, gicheo, label, cr["parent"]]
             aligns     = ["center", "left", "left", "center", "left"]
             for col, (val, al) in enumerate(zip(fixed_vals, aligns), 1):
-                apply_cell(ws, data_row, col, val, row_bg, align=al)
+                cell = apply_cell(ws, data_row, col, val, row_bg, align=al)
+                if col == 5:
+                    cmt = make_comment(cr["parent_obj"])
+                    if cmt:
+                        cell.comment = cmt
 
-            for i, child in enumerate(cr["children"]):
+            for i, (child, child_obj) in enumerate(zip(cr["children"], cr["child_objs"])):
                 col = START + i
                 child_bg = BG_CHILD_CLIMATE if is_climate(child) else BG_CHILD_OTHER
-                apply_cell(ws, data_row, col, child, child_bg, align="left")
+                cell = apply_cell(ws, data_row, col, child, child_bg, align="left")
+                cmt = make_comment(child_obj)
+                if cmt:
+                    cell.comment = cmt
 
             data_row += 1
             total_rows += 1
