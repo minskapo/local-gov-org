@@ -1,4 +1,9 @@
-"""기후·환경 관련 행정기구 현황 → 엑셀"""
+"""기후·환경 관련 행정기구 현황 → 엑셀
+
+포함: 사업소, 본청 기구 등 일반 행정기구
+제외: 연구원, 연구소, 연구실 (비일반 행정기관)
+기초명 형식: "서울특별시 마포구" → "마포구" (마지막 단어)
+"""
 import json
 from pathlib import Path
 from openpyxl import Workbook
@@ -14,9 +19,22 @@ CLIMATE_KW = frozenset([
     "대기", "수질", "오염", "자원순환", "재활용", "산림", "공원",
 ])
 
+# 연구원·연구소·연구실 등 일반 행정기관이 아닌 기구 제외
+EXCLUDE_KW = frozenset(["연구원", "연구소", "연구실"])
+
 
 def is_climate(name: str) -> bool:
     return any(kw in name for kw in CLIMATE_KW)
+
+
+def is_excluded(name: str) -> bool:
+    return any(kw in name for kw in EXCLUDE_KW)
+
+
+def short_gicheo(full_name: str) -> str:
+    """'서울특별시 마포구' → '마포구'"""
+    parts = full_name.strip().split()
+    return parts[-1] if len(parts) > 1 else full_name
 
 
 def load_all():
@@ -32,10 +50,13 @@ def get_climate_rows(d):
     각 행: {parent, children, climate_parent(bool)}
     - climate_parent=True: 상위기구명 자체가 기후환경 관련
     - climate_parent=False: 상위기구는 비기후이지만 하위기구 중 기후환경 기구 존재
+    연구원·연구소·연구실은 제외.
     """
     rows = []
     for unit in d.get("structure", []):
         name = unit.get("name", "")
+        if is_excluded(name):
+            continue
         children = [c.get("name", "") for c in unit.get("children", [])]
         if is_climate(name):
             rows.append({"parent": name, "children": children, "climate_parent": True})
@@ -127,11 +148,9 @@ def main():
         else:
             gwangyeok = code_to_name.get(parent_code, "")
             if not gwangyeok:
-                # parent 코드 체계가 다를 때 (행정표준코드 vs 2자리 코드)
-                # 지자체명에서 광역명 추출 ("충청북도 단양군" → "충청북도")
                 parts = name.split()
                 gwangyeok = parts[0] if len(parts) > 1 else name
-            gicheo = name
+            gicheo = short_gicheo(name)  # "서울특별시 마포구" → "마포구"
 
         climate_rows = get_climate_rows(d)
         if not climate_rows:
