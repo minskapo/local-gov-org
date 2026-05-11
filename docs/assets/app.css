@@ -379,6 +379,54 @@ button { cursor: pointer; font: inherit; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── 안내문 패널 ─────────────────────────────────────────── */
+.info-panel {
+  border: 1px solid var(--clr-border); border-radius: var(--radius);
+  margin-bottom: 1.25rem; overflow: hidden;
+}
+.info-toggle {
+  width: 100%; display: flex; align-items: center; gap: .5rem;
+  padding: .55rem .9rem; background: #F8FAFC; border: none;
+  font-size: .83rem; color: var(--clr-muted); text-align: left; cursor: pointer;
+}
+.info-toggle:hover { background: #F1F5F9; }
+.info-icon {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--clr-accent); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: .7rem; font-weight: 700; flex-shrink: 0;
+}
+.info-caret { margin-left: auto; font-size: .72rem; }
+.info-body { padding: .75rem .9rem; background: #fff; border-top: 1px solid var(--clr-border); }
+.info-method { margin-bottom: .6rem; display: flex; flex-direction: column; gap: .3rem; }
+.info-row { display: flex; gap: .6rem; font-size: .82rem; line-height: 1.5; }
+.info-label {
+  flex: 0 0 70px; font-weight: 600; color: var(--clr-muted); font-size: .78rem;
+  padding-top: .05rem;
+}
+.info-warning {
+  background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 6px;
+  padding: .55rem .7rem; font-size: .8rem; line-height: 1.55; color: #92400E;
+  display: flex; gap: .5rem; align-items: flex-start;
+}
+.warn-icon { flex-shrink: 0; font-size: .9rem; margin-top: .05rem; }
+
+/* ── 조례 원문 버튼 ──────────────────────────────────────── */
+.ordinance-links {
+  display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem;
+}
+.ordinance-btn {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .35rem .75rem; border-radius: 6px; font-size: .8rem;
+  background: #EFF6FF; color: var(--clr-accent);
+  border: 1px solid #BFDBFE; text-decoration: none; white-space: nowrap;
+}
+.ordinance-btn:hover { background: #DBEAFE; text-decoration: none; }
+.ordinance-btn.secondary {
+  background: #F8FAFC; color: var(--clr-muted); border-color: var(--clr-border);
+}
+.ordinance-btn.secondary:hover { background: #F1F5F9; color: var(--clr-text); }
+
 /* ── 광역+기초 그룹 레이아웃 (개요) ──────────────────────── */
 .gwangyeok-section {
   display: flex; gap: 1rem; margin-bottom: 1.25rem; align-items: flex-start;

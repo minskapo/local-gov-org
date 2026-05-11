@@ -44,6 +44,9 @@ Alpine.data('mainApp', () => ({
   kwSearchDone: false,
   searchDocs: null,
 
+  // ── UI 상태 ──────────────────────────────────────────────
+  infoOpen: false,
+
   // ── 헤더 검색 ────────────────────────────────────────────
   searchQuery: '',
   searchResults: [],
