@@ -11,6 +11,7 @@ function parseHash(hash) {
   if (h.startsWith('/region/')) return { view: 'region',   code: h.slice(8) }
   if (h === '/compare')          return { view: 'compare',  code: '' }
   if (h.startsWith('/kwsearch')) return { view: 'kwsearch', code: '' }
+  if (h.startsWith('/units'))    return { view: 'units',    code: '' }
   return { view: 'overview', code: '' }
 }
 
@@ -40,6 +41,14 @@ Alpine.data('mainApp', () => ({
   kwResultMap: {},   // { regionCode: [ group, ... ] }
   kwSearchDone: false,
   searchDocs: null,
+
+  // ── 전체 기구 현황 ────────────────────────────────────────
+  unitsRows: [],
+  unitsFilter: { gw: '', type: '', name: '' },
+  unitsSortCol: '',
+  unitsSortDir: 1,
+  unitsPage: 0,
+  unitDetail: null,
 
   // ── 헤더 검색 ────────────────────────────────────────────
   searchQuery: '',
@@ -114,6 +123,37 @@ Alpine.data('mainApp', () => ({
     return out
   },
 
+  // ── 전체 기구 현황 computed ───────────────────────────────
+  get unitsGwOptions() {
+    return this.gwangyeok.map(r => r.name)
+  },
+  get unitsFiltered() {
+    const { gw, type, name } = this.unitsFilter
+    let rows = this.unitsRows
+    if (gw)   rows = rows.filter(r => r.gwName === gw)
+    if (type) rows = rows.filter(r => r.parentType === type)
+    if (name) { const q = name.toLowerCase(); rows = rows.filter(r => r.parentName.toLowerCase().includes(q)) }
+    if (!this.unitsSortCol) return rows
+    const col = this.unitsSortCol, dir = this.unitsSortDir
+    return [...rows].sort((a, b) => {
+      const av = a[col] || '', bv = b[col] || ''
+      return av < bv ? -dir : av > bv ? dir : 0
+    })
+  },
+  get unitsMaxChildren() {
+    return this.unitsRows.reduce((m, r) => Math.max(m, r.children.length), 0)
+  },
+  get unitsChildIndices() {
+    return Array.from({ length: this.unitsMaxChildren }, (_, i) => i)
+  },
+  get unitsTotalPages() {
+    return Math.max(1, Math.ceil(this.unitsFiltered.length / 100))
+  },
+  get unitsPageRows() {
+    const s = this.unitsPage * 100
+    return this.unitsFiltered.slice(s, s + 100)
+  },
+
   // kwsearch 뷰 표시용 평탄 행 목록
   get kwSearchRows() {
     if (!this.kwSearchDone) return []
@@ -150,6 +190,11 @@ Alpine.data('mainApp', () => ({
     this.view = view
     this.currentCode = code
 
+    if (view === 'units') {
+      await this._ensureSearchDocs()
+      this._buildUnitsRows()
+    }
+
     if (view === 'region' && code) {
       this.loading = true
       this.selectedUnit = null
@@ -165,6 +210,44 @@ Alpine.data('mainApp', () => ({
       }
     }
   },
+
+  // ── 전체 기구 현황 ────────────────────────────────────────
+  _buildUnitsRows() {
+    if (!this.searchDocs || this.unitsRows.length) return
+    const childrenOf = {}
+    for (const doc of this.searchDocs) {
+      if (doc.parent_name) {
+        const key = doc.region_code + '\x00' + doc.parent_name
+        if (!childrenOf[key]) childrenOf[key] = []
+        childrenOf[key].push({ name: doc.unit_name, type: doc.unit_type, summary: doc.분장사무_summary || '' })
+      }
+    }
+    const rows = []
+    for (const doc of this.searchDocs) {
+      if (doc.parent_name) continue
+      const ri = this.indexMap[doc.region_code] || {}
+      const gwName = ri.level === '광역' ? ri.name : (ri.parent_name || '')
+      const giName = ri.level === '기초' ? ri.name : ''
+      const key = doc.region_code + '\x00' + doc.unit_name
+      rows.push({
+        code: doc.region_code,
+        gwName,
+        giName,
+        parentType: doc.unit_type,
+        parentName: doc.unit_name,
+        parentSummary: doc.분장사무_summary || '',
+        children: childrenOf[key] || [],
+      })
+    }
+    this.unitsRows = rows
+  },
+  showUnitDetail(unit) { if (unit) this.unitDetail = unit },
+  sortUnits(col) {
+    if (this.unitsSortCol === col) this.unitsSortDir *= -1
+    else { this.unitsSortCol = col; this.unitsSortDir = 1 }
+  },
+  prevUnitsPage() { if (this.unitsPage > 0) this.unitsPage-- },
+  nextUnitsPage() { if (this.unitsPage < this.unitsTotalPages - 1) this.unitsPage++ },
 
   // ── 트리 선택 ─────────────────────────────────────────────
   selectUnit(unit, parent = null) {

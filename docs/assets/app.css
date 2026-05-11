@@ -410,20 +410,118 @@ button { cursor: pointer; font: inherit; }
   background: #FEF08A; padding: .05rem .3rem; border-radius: 3px;
 }
 
-/* 하위기구 박스들 */
+/* 하위기구 박스들 (1행 가로 스크롤) */
 .kws-children-wrap {
-  display: flex; flex-wrap: wrap; gap: .3rem; padding-left: .5rem;
+  display: flex; flex-wrap: nowrap; overflow-x: auto; gap: .3rem; padding-left: .5rem;
+  padding-bottom: 2px;
 }
+.kws-children-wrap::-webkit-scrollbar { height: 3px; }
+.kws-children-wrap::-webkit-scrollbar-thumb { background: var(--clr-border); border-radius: 2px; }
 .kws-child-box {
-  display: inline-flex; align-items: center; gap: .25rem;
+  display: inline-flex; align-items: center; gap: .25rem; flex-shrink: 0;
   border: 1px solid var(--clr-border); border-radius: 5px;
   padding: .2rem .45rem; font-size: .78rem; background: #F8FAFC;
-  cursor: default;
+  cursor: pointer; white-space: nowrap;
 }
+.kws-child-box:hover { border-color: var(--clr-accent); }
 .kws-child-box.hit {
   background: #FEF9C3; border-color: #FDE68A; font-weight: 600;
 }
 .kws-child-box:not(.hit) { color: var(--clr-muted); }
+
+/* kws parent name 클릭 */
+.kws-parent-name.has-summary { cursor: pointer; }
+.kws-parent-name.has-summary:hover { text-decoration: underline; }
+
+/* ── 전체 기구 현황 ──────────────────────────────────────── */
+.units-view h2 { margin-bottom: .75rem; }
+.units-filters {
+  display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+  margin-bottom: .75rem;
+}
+.units-filter-sel {
+  padding: .35rem .5rem; border: 1px solid var(--clr-border);
+  border-radius: 6px; font-size: .82rem; background: #fff; outline: none;
+}
+.units-filter-sel:focus { border-color: var(--clr-accent); }
+.units-filter-input {
+  flex: 1; min-width: 160px; max-width: 260px;
+  padding: .35rem .6rem; border: 1px solid var(--clr-border);
+  border-radius: 6px; font-size: .85rem; outline: none;
+}
+.units-filter-input:focus { border-color: var(--clr-accent); }
+.units-count { font-size: .82rem; color: var(--clr-muted); margin-left: auto; white-space: nowrap; }
+.units-count strong { color: var(--clr-text); }
+
+.units-pagination {
+  display: flex; align-items: center; gap: .6rem;
+  margin: .5rem 0; font-size: .82rem;
+}
+.page-btn {
+  padding: .25rem .65rem; border: 1px solid var(--clr-border);
+  border-radius: 6px; background: #fff; font-size: .8rem; color: var(--clr-text);
+}
+.page-btn:hover:not(:disabled) { background: #F1F5F9; }
+.page-btn:disabled { opacity: .4; cursor: default; }
+.page-info { color: var(--clr-muted); }
+
+.units-table-wrap { overflow-x: auto; max-height: calc(100vh - 220px); overflow-y: auto; }
+.units-table { min-width: max-content; }
+.units-table thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--clr-primary); color: #fff;
+}
+.sort-th { cursor: pointer; user-select: none; white-space: nowrap; }
+.sort-th:hover { background: var(--clr-primary-lt) !important; }
+.sort-ind { margin-left: .25rem; font-size: .7rem; }
+.units-child-th { min-width: 100px; color: rgba(255,255,255,.8); font-weight: 400; }
+.units-code-cell { font-size: .75rem; color: var(--clr-muted); white-space: nowrap; }
+.units-gw-cell, .units-gi-cell { white-space: nowrap; }
+.units-gi-cell { color: var(--clr-muted); }
+.units-child-cell { min-width: 100px; }
+
+/* 클릭 가능한 기구명 */
+.unit-link { cursor: default; }
+.unit-link.has-summary { cursor: pointer; color: var(--clr-accent); }
+.unit-link.has-summary:hover { text-decoration: underline; }
+
+/* 행 유형별 배경색 */
+.urow-보좌기관 td { background: #fdf4ff; }
+.urow-직속기관 td { background: #f1f5f9; }
+.urow-사업소 td   { background: #fff7ed; }
+.urow-출장소 td   { background: #fffbeb; }
+.urow-보좌기관:hover td { background: #f3e8ff; }
+.urow-직속기관:hover td { background: #e2e8f0; }
+.urow-사업소:hover td   { background: #ffedd5; }
+.urow-출장소:hover td   { background: #fef3c7; }
+
+/* ── 소관업무 팝업 ────────────────────────────────────────── */
+.unit-detail-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 500;
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.unit-detail-modal {
+  background: #fff; border-radius: var(--radius);
+  box-shadow: 0 16px 48px rgba(0,0,0,.25);
+  width: 100%; max-width: 520px; max-height: 70vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.unit-detail-header {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .8rem 1rem; border-bottom: 1px solid var(--clr-border);
+  background: #F8FAFC; flex-shrink: 0;
+}
+.unit-detail-name { flex: 1; font-size: .95rem; }
+.unit-detail-close {
+  width: 28px; height: 28px; border: none; background: none;
+  color: var(--clr-muted); font-size: 1rem; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+}
+.unit-detail-close:hover { background: #FEE2E2; color: #DC2626; }
+.unit-detail-body { padding: .9rem 1rem; overflow-y: auto; flex: 1; }
+.unit-detail-summary { font-size: .85rem; line-height: 1.7; color: var(--clr-text); white-space: pre-wrap; }
+.unit-detail-empty { font-size: .85rem; color: var(--clr-muted); line-height: 1.7; }
+.unit-detail-empty small { font-size: .78rem; }
 
 /* ── 공통 ────────────────────────────────────────────── */
 .empty-state { padding: 3rem; text-align: center; color: var(--clr-muted); }
@@ -450,4 +548,6 @@ button { cursor: pointer; font: inherit; }
   .gwangyeok-section { flex-direction: column; }
   .gw-section-card { flex: none; width: 100%; }
   .kws-region-name { flex: 0 0 70px; }
+  .units-table-wrap { max-height: calc(100vh - 280px); }
+  .units-filter-input { max-width: 100%; }
 }

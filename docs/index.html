@@ -23,6 +23,8 @@
          href="#/compare" @click.prevent="navigate('/compare')">지자체 비교</a>
       <a :class="{active: view==='kwsearch'}"
          href="#/kwsearch" @click.prevent="navigate('/kwsearch')">키워드 검색</a>
+      <a :class="{active: view==='units'}"
+         href="#/units" @click.prevent="navigate('/units')">전체 기구 현황</a>
     </nav>
     <div class="search-wrap" @click.outside="searchOpen=false">
       <input class="search-input" type="search" placeholder="지자체·기구명 검색…"
@@ -388,15 +390,16 @@
                         <div class="kws-parent-row">
                           <span class="type-badge" :class="'badge-'+mg.parentType" x-text="mg.parentType"></span>
                           <span class="kws-parent-name"
-                            :class="{hit: mg.parentHit}"
-                            :title="mg.parentSummary || ''"
+                            :class="{hit: mg.parentHit, 'has-summary': !!mg.parentSummary}"
+                            @click="mg.parentSummary && showUnitDetail({name:mg.parentName, type:mg.parentType, summary:mg.parentSummary})"
                             x-text="mg.parentName">
                           </span>
                         </div>
-                        <!-- 하위기구 박스들 -->
+                        <!-- 하위기구 박스들 (가로 스크롤, 1행 고정) -->
                         <div class="kws-children-wrap" x-show="mg.children.length">
                           <template x-for="(c, ci) in mg.children" :key="ci">
-                            <div class="kws-child-box" :class="{hit: c.hit}" :title="c.summary || ''">
+                            <div class="kws-child-box" :class="{hit: c.hit}"
+                              @click="c.summary && showUnitDetail({name:c.name, type:c.type, summary:c.summary})">
                               <span class="type-badge sm" :class="'badge-'+c.type" x-text="c.type"></span>
                               <span x-text="c.name"></span>
                             </div>
@@ -413,7 +416,139 @@
       </template>
     </div><!-- /kwsearch -->
 
+
+    <!-- ════ 전체 기구 현황 ════ -->
+    <div x-show="view==='units'" class="units-view">
+      <h2>전체 행정기구 현황</h2>
+
+      <!-- 필터 -->
+      <div class="units-filters">
+        <select class="units-filter-sel" x-model="unitsFilter.gw" @change="unitsPage=0">
+          <option value="">광역 전체</option>
+          <template x-for="opt in unitsGwOptions" :key="opt">
+            <option :value="opt" x-text="opt"></option>
+          </template>
+        </select>
+        <select class="units-filter-sel" x-model="unitsFilter.type" @change="unitsPage=0">
+          <option value="">기구유형 전체</option>
+          <template x-for="t in typeOrder" :key="t">
+            <option :value="t" x-text="t"></option>
+          </template>
+        </select>
+        <input class="units-filter-input" type="text" placeholder="상위기구명 검색…"
+          x-model="unitsFilter.name" @input="unitsPage=0">
+        <span class="units-count" x-show="unitsRows.length">
+          <strong x-text="unitsFiltered.length.toLocaleString()"></strong>개 기구
+        </span>
+      </div>
+
+      <!-- 로딩 안내 -->
+      <template x-if="!unitsRows.length && !loading">
+        <div class="empty-state">데이터를 불러오는 중입니다…</div>
+      </template>
+
+      <!-- 테이블 -->
+      <template x-if="unitsRows.length">
+        <div>
+          <!-- 페이지네이션 (상단) -->
+          <div class="units-pagination" x-show="unitsTotalPages > 1">
+            <button class="page-btn" @click="prevUnitsPage()" :disabled="unitsPage===0">← 이전</button>
+            <span class="page-info"
+              x-text="(unitsPage+1)+' / '+unitsTotalPages+' 페이지 (총 '+unitsFiltered.length.toLocaleString()+'행)'"></span>
+            <button class="page-btn" @click="nextUnitsPage()" :disabled="unitsPage>=unitsTotalPages-1">다음 →</button>
+          </div>
+
+          <div class="units-table-wrap">
+            <table class="data-table units-table">
+              <thead>
+                <tr>
+                  <th class="sort-th" @click="sortUnits('code')">
+                    코드<span class="sort-ind" x-text="unitsSortCol==='code'?(unitsSortDir>0?'▲':'▼'):''"></span>
+                  </th>
+                  <th class="sort-th" @click="sortUnits('gwName')">
+                    광역<span class="sort-ind" x-text="unitsSortCol==='gwName'?(unitsSortDir>0?'▲':'▼'):''"></span>
+                  </th>
+                  <th class="sort-th" @click="sortUnits('giName')">
+                    기초<span class="sort-ind" x-text="unitsSortCol==='giName'?(unitsSortDir>0?'▲':'▼'):''"></span>
+                  </th>
+                  <th class="sort-th" @click="sortUnits('parentType')">
+                    기구유형<span class="sort-ind" x-text="unitsSortCol==='parentType'?(unitsSortDir>0?'▲':'▼'):''"></span>
+                  </th>
+                  <th class="sort-th" @click="sortUnits('parentName')">
+                    상위 행정기구명<span class="sort-ind" x-text="unitsSortCol==='parentName'?(unitsSortDir>0?'▲':'▼'):''"></span>
+                  </th>
+                  <template x-for="i in unitsChildIndices" :key="i">
+                    <th class="units-child-th" x-text="'하위기구'+(i+1)"></th>
+                  </template>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="row in unitsPageRows" :key="row.code+'#'+row.parentName">
+                  <tr :class="{
+                    'urow-보좌기관': row.parentType==='보좌기관',
+                    'urow-직속기관': row.parentType==='직속기관',
+                    'urow-사업소':  row.parentType==='사업소',
+                    'urow-출장소':  row.parentType==='출장소',
+                  }">
+                    <td class="units-code-cell" x-text="row.code"></td>
+                    <td class="units-gw-cell" x-text="row.gwName"></td>
+                    <td class="units-gi-cell" x-text="row.giName"></td>
+                    <td><span class="type-badge" :class="'badge-'+row.parentType" x-text="row.parentType"></span></td>
+                    <td>
+                      <span class="unit-link" :class="{'has-summary': !!row.parentSummary}"
+                        @click="showUnitDetail({name:row.parentName, type:row.parentType, summary:row.parentSummary})"
+                        x-text="row.parentName"></span>
+                    </td>
+                    <template x-for="i in unitsChildIndices" :key="i">
+                      <td class="units-child-cell">
+                        <template x-if="row.children[i]">
+                          <span class="unit-link" :class="{'has-summary': !!row.children[i].summary}"
+                            @click="showUnitDetail(row.children[i])"
+                            x-text="row.children[i].name"></span>
+                        </template>
+                      </td>
+                    </template>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 페이지네이션 (하단) -->
+          <div class="units-pagination" x-show="unitsTotalPages > 1">
+            <button class="page-btn" @click="prevUnitsPage()" :disabled="unitsPage===0">← 이전</button>
+            <span class="page-info"
+              x-text="(unitsPage+1)+' / '+unitsTotalPages+' 페이지'"></span>
+            <button class="page-btn" @click="nextUnitsPage()" :disabled="unitsPage>=unitsTotalPages-1">다음 →</button>
+          </div>
+        </div>
+      </template>
+    </div><!-- /units -->
+
   </main>
+
+  <!-- ── 소관업무 팝업 ──────────────────────────────────────── -->
+  <div class="unit-detail-overlay" x-show="unitDetail" @click.self="unitDetail=null">
+    <div class="unit-detail-modal">
+      <template x-if="unitDetail">
+        <div>
+          <div class="unit-detail-header">
+            <span class="type-badge lg" :class="'badge-'+(unitDetail.type||'')" x-text="unitDetail.type||''"></span>
+            <strong class="unit-detail-name" x-text="unitDetail.name"></strong>
+            <button class="unit-detail-close" @click="unitDetail=null">✕</button>
+          </div>
+          <div class="unit-detail-body">
+            <template x-if="unitDetail.summary">
+              <p class="unit-detail-summary" x-text="unitDetail.summary"></p>
+            </template>
+            <template x-if="!unitDetail.summary">
+              <p class="unit-detail-empty">소관업무 정보가 없습니다.<br><small>조례 별표 형식으로 수록된 경우 파싱되지 않았습니다.</small></p>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
 
   <div class="loading-overlay" x-show="loading" x-cloak>
     <div class="spinner"></div>
