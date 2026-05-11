@@ -103,9 +103,11 @@ Alpine.data('mainApp', () => ({
     for (const [code, groups] of Object.entries(this.kwResultMap)) {
       out[code] = groups.map(g => {
         const parentVisible = !g.parentType || visible.includes(g.parentType)
-        const filteredChildren = g.children.filter(c => !c.type || visible.includes(c.type))
-        if (!parentVisible && !filteredChildren.some(c => c.hit)) return null
-        if (parentVisible && !g.parentHit && !filteredChildren.some(c => c.hit)) return null
+        // hit children are always shown; type filter only hides non-matching siblings
+        const filteredChildren = g.children.filter(c => c.hit || !c.type || visible.includes(c.type))
+        const anyChildHit = g.children.some(c => c.hit)
+        if (!parentVisible && !anyChildHit) return null
+        if (!g.parentHit && !anyChildHit) return null
         return { ...g, parentVisible, children: filteredChildren }
       }).filter(Boolean)
     }
@@ -230,12 +232,11 @@ Alpine.data('mainApp', () => ({
       const seenParents = new Set()
 
       for (const doc of rd.parents) {
-        const text = doc.unit_name + ' ' + (doc.분장사무_summary || '')
-        const parentHit = this._matchesCond(text, conditions)
+        const parentHit = this._matchesCond(doc.unit_name, conditions)
         const children = rd.childrenByParent[doc.unit_name] || []
         const hitSet = new Set(
           children
-            .filter(c => this._matchesCond(c.unit_name + ' ' + (c.분장사무_summary || ''), conditions))
+            .filter(c => this._matchesCond(c.unit_name, conditions))
             .map(c => c.unit_name)
         )
         if (parentHit || hitSet.size) {
@@ -260,7 +261,7 @@ Alpine.data('mainApp', () => ({
         if (seenParents.has(pName)) continue
         const hitSet = new Set(
           children
-            .filter(c => this._matchesCond(c.unit_name + ' ' + (c.분장사무_summary || ''), conditions))
+            .filter(c => this._matchesCond(c.unit_name, conditions))
             .map(c => c.unit_name)
         )
         if (hitSet.size) {
