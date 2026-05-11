@@ -19,7 +19,12 @@ OUT_DIR  = BASE_DIR / "docs" / "data"
 REGIONS_DIR = OUT_DIR / "regions"
 KW_DIR   = OUT_DIR / "by_keyword"
 
-TYPE_ORDER = ["국", "실", "본부", "단", "관", "처", "담당관", "직속기관", "과"]
+TYPE_ORDER = [
+    "국", "실", "본부", "단", "관", "처",
+    "보좌기관", "담당관", "한시기구",
+    "직속기관", "사업소", "출장소",
+    "과",
+]
 
 
 def load_all():

@@ -13,7 +13,9 @@ EXCEL_PATH = BASE_DIR / "data" / "processed" / "행정기구_상하위_목록.xl
 TYPE_BG = {
     "국": "DBEAFE", "실": "F3E8FF", "본부": "FEF9C3",
     "단": "FFEDD5", "관": "DCFCE7", "처": "FEE2E2",
-    "직속기관": "F1F5F9", "담당관": "FDF4FF", "과": "FFFFFF",
+    "보좌기관": "F5D0FE", "담당관": "FDF4FF", "한시기구": "FEF2F2",
+    "직속기관": "F1F5F9", "사업소": "FFF7ED", "출장소": "FFFBEB",
+    "하부행정기관": "F0FDF4", "과": "FFFFFF",
 }
 CHILD_BG = "F8FAFC"
 HDR_BG   = "1E3A5F"

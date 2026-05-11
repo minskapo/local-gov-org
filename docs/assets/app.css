@@ -18,8 +18,12 @@
   --c-단: #FFEDD5; --c-단-t: #9A3412;
   --c-관: #DCFCE7; --c-관-t: #166534;
   --c-처: #FEE2E2; --c-처-t: #991B1B;
+  --c-보좌기관: #F5D0FE; --c-보좌기관-t: #701A75;
   --c-담당관: #FDF4FF; --c-담당관-t: #701A75;
+  --c-한시기구: #FEF2F2; --c-한시기구-t: #991B1B;
   --c-직속기관: #F1F5F9; --c-직속기관-t: #334155;
+  --c-사업소: #FFF7ED; --c-사업소-t:   #9A3412;
+  --c-출장소: #FFFBEB; --c-출장소-t:   #854D0E;
   --c-과: #FFFFFF; --c-과-t: #374151;
 
   /* 정책분야 색상 */
@@ -170,6 +174,20 @@ button { cursor: pointer; font: inherit; }
 .tree-toggle-placeholder { width: 16px; flex-shrink: 0; }
 .child-row { padding-left: 1.4rem; background: #FAFAFA; }
 .child-row:hover { background: #F0F9FF; }
+
+/* 유형별 트리행 좌측 강조선 */
+.tree-type-국       { border-left: 3px solid var(--c-국-t); }
+.tree-type-실       { border-left: 3px solid var(--c-실-t); }
+.tree-type-본부     { border-left: 3px solid var(--c-본부-t); }
+.tree-type-단       { border-left: 3px solid var(--c-단-t); }
+.tree-type-관       { border-left: 3px solid var(--c-관-t); }
+.tree-type-처       { border-left: 3px solid var(--c-처-t); }
+.tree-type-보좌기관 { border-left: 3px solid var(--c-보좌기관-t); background: #fdf4ff22; }
+.tree-type-담당관   { border-left: 3px solid var(--c-담당관-t); }
+.tree-type-한시기구 { border-left: 3px solid var(--c-한시기구-t); background: #fef2f288; }
+.tree-type-직속기관 { border-left: 3px solid var(--c-직속기관-t); background: #f1f5f9; }
+.tree-type-사업소   { border-left: 3px solid var(--c-사업소-t); background: #fff7ed88; }
+.tree-type-출장소   { border-left: 3px solid var(--c-출장소-t); background: #fffbeb88; }
 .child-indent { color: var(--clr-muted); font-size: .75rem; }
 .unit-name { font-size: .85rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .unit-name.bold { font-weight: 600; }
@@ -207,9 +225,40 @@ button { cursor: pointer; font: inherit; }
 .badge-단      { background: var(--c-단);      color: var(--c-단-t); }
 .badge-관      { background: var(--c-관);      color: var(--c-관-t); }
 .badge-처      { background: var(--c-처);      color: var(--c-처-t); }
+.badge-보좌기관{ background: var(--c-보좌기관);color: var(--c-보좌기관-t); }
 .badge-담당관  { background: var(--c-담당관);  color: var(--c-담당관-t); }
+.badge-한시기구{ background: var(--c-한시기구);color: var(--c-한시기구-t); }
 .badge-직속기관{ background: var(--c-직속기관);color: var(--c-직속기관-t); }
+.badge-사업소  { background: var(--c-사업소);  color: var(--c-사업소-t); }
+.badge-출장소  { background: var(--c-출장소);  color: var(--c-출장소-t); }
 .badge-과      { background: var(--c-과); border: 1px solid #e2e8f0; color: var(--c-과-t); }
+
+/* ── 기구유형 분포 막대 (개요 화면) ──────────────────────── */
+.type-bars { display: flex; flex-direction: column; gap: .3rem; max-width: 700px; }
+.type-bar-row {
+  display: flex; align-items: center; gap: .6rem; border-radius: 4px; padding: .12rem .25rem;
+  cursor: pointer;
+}
+.type-bar-row:hover { background: rgba(0,0,0,.03); }
+.type-bar-label { width: 70px; font-size: .78rem; text-align: right; flex-shrink: 0; }
+.type-bar-wrap { flex: 1; display: flex; align-items: center; gap: .4rem; }
+.type-bar { height: 14px; border-radius: 3px; min-width: 4px; transition: width .4s; }
+.type-bar-val { font-size: .72rem; color: var(--clr-muted); flex-shrink: 0; }
+
+/* type bar background by type */
+.type-bar.bar-국       { background: var(--c-국-t); }
+.type-bar.bar-실       { background: var(--c-실-t); }
+.type-bar.bar-본부     { background: var(--c-본부-t); }
+.type-bar.bar-단       { background: var(--c-단-t); }
+.type-bar.bar-관       { background: var(--c-관-t); }
+.type-bar.bar-처       { background: var(--c-처-t); }
+.type-bar.bar-보좌기관 { background: var(--c-보좌기관-t); }
+.type-bar.bar-담당관   { background: var(--c-담당관-t); }
+.type-bar.bar-한시기구 { background: var(--c-한시기구-t); }
+.type-bar.bar-직속기관 { background: var(--c-직속기관-t); }
+.type-bar.bar-사업소   { background: var(--c-사업소-t); }
+.type-bar.bar-출장소   { background: var(--c-출장소-t); }
+.type-bar.bar-과       { background: #94a3b8; }
 
 /* ── 정책분야 칩·점·배경 ───────────────────────────────── */
 .kw-chip {
@@ -303,6 +352,7 @@ button { cursor: pointer; font: inherit; }
   font-size: .82rem; font-weight: 600; transition: border-color .1s;
 }
 .type-chip.active { border-color: var(--clr-primary); }
+.type-chip-count { font-size: .7rem; font-weight: 400; opacity: .65; margin-left: .2rem; }
 .types-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .5rem; margin-top: .75rem;
 }

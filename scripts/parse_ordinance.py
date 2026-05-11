@@ -970,7 +970,7 @@ _SKIP_TITLES = re.compile(
     r"한시기구|종전|이동|삭제|분장사무|하부조직|소장|원장|소관사무|관장|"
     r"과장|담당관의\s*직급|정원|임용권|의회|비서|예산|"
     r"소속기관|소속행정기관|합의제행정기관|부구청장|부군수|하부행정기관|"
-    r"구청장\s*직속|시장\s*직속|군수\s*직속).*"
+    r"국에\s*속하지|구청장\s*직속|시장\s*직속|군수\s*직속).*"
     r"|실[·ㆍ·]국|실·국|실ㆍ국"  # 실·국·본부 listing articles
 )
 
@@ -1144,6 +1144,8 @@ def _extract_subs_inline(content: str, code: str, parent_name: str) -> list:
         subs = numbered
     result = []
     for s in subs:
+        if s == parent_name:  # 자기 자신을 하위 기구로 갖지 않도록
+            continue
         unit_type = "담당관" if "담당관" in s else ("실" if s.endswith("실") else "과")
         result.append({
             "id": build_id(code, parent_name, s),
@@ -1348,8 +1350,16 @@ def parse_gwangyeok_generic(
                   and re.search(r"[·ㆍ,]", 조제목)
                   and ("를 둔다" in content or "을 둔다" in content)):
                 flat = _extract_flat_org_list(content, code)
+                flat_duties = _parse_flat_duties_by_unit(content)
                 for u in flat:
                     if not any(n["name"] == u["name"] for n in structure):
+                        unit_duties = flat_duties.get(u["name"], [])
+                        if unit_duties:
+                            u["분장사무_항목"] = unit_duties
+                            u["분장사무_원문"] = content
+                            u["키워드_태그"] = apply_keywords(
+                                u["name"] + " " + " ".join(unit_duties)
+                            )
                         structure.append(u)
             # 보좌기관(감사실 등) 직접 정의 조문 — "감사실에 ...를 둔다" 또는 감사실 단독
             elif (조제목.endswith(_LEVEL1_SUFFIXES)
@@ -1398,7 +1408,7 @@ def parse_gwangyeok_generic(
     # 이미 다른 경로로 파싱된 동명의 level-1 단위가 있으면 그룹 자식으로 흡수한다.
     # (예: 동작구 — 감사담당관·홍보담당관·핵심정책추진단·운영지원과)
     _BOSWA_TITLE_RE = re.compile(
-        r"보좌기관|독립.*담당관|국에\s*속하지|국에\s*설치하지"
+        r"보좌기관|담당관|독립.*담당관|국에\s*속하지|국에\s*설치하지|실ㆍ국에"
     )
     # 단위명 자체로는 부적합한 일반어
     _BOSWA_GENERIC = {
@@ -1426,42 +1436,52 @@ def parse_gwangyeok_generic(
         if not _BOSWA_TITLE_RE.search(t):
             continue
         c = get_content(a)
-        # "부X장 밑에/소속으로 ... 을/를 둔다" 패턴에서 단위 목록 추출
-        m_list = re.search(
-            r"부\w*[장수]\s*(?:밑에|소속(?:으로)?)\s*(.+?)\s*[을를]\s*둔다",
+        # 여러 패턴으로 단위 목록 chunk 수집
+        chunks: list[str] = []
+        # 1순위: "부X장/시장/군수/구청장 직속·소속·밑에 X를 둔다" (반복 매칭)
+        for m in re.finditer(
+            r"(?:부\w*[장수]|(?:시|군|구청|도)장)\s*"
+            r"(?:직속(?:으로)?|소속(?:으로)?|밑에)\s*"
+            r"([^。\n.]+?)\s*[을를]\s*둔다",
             c, re.DOTALL,
-        )
-        chunk = m_list.group(1) if m_list else ""
-        if not chunk:
-            # fallback — 항 번호 직후 ~ "둔다" 사이
-            m_alt = re.search(
-                r"①\s*(.+?)\s*[을를]\s*둔다", c, re.DOTALL
+        ):
+            chunks.append(m.group(1))
+        # 2순위: 항목 번호(①②③…) 각각에서 추출
+        if not chunks:
+            for m in re.finditer(
+                r"[①②③④⑤⑥]\s*(.+?)\s*[을를]\s*둔다", c, re.DOTALL
+            ):
+                chunks.append(m.group(1))
+        # 3순위: "위하여/하기 위하여 X를 둔다" (담당관 포함 시)
+        if not chunks:
+            m_all = re.search(
+                r"(?:하기\s*)?위하여\s*(.+?)\s*[을를]\s*둔다", c, re.DOTALL
             )
-            chunk = m_alt.group(1) if m_alt else ""
-        if not chunk:
+            if m_all and "담당관" in m_all.group(1):
+                chunks.append(m_all.group(1))
+        if not chunks:
             continue
-        # 부속 마크업/괄호/개정 태그 제거
-        chunk = re.sub(r"<[^>]+>|\([^)]*\)", "", chunk)
-        # 한글 접속조사 "과/와"가 단위 사이에 끼어든 경우 분리 (예: "감사담당관과 홍보담당관")
-        chunk = re.sub(
-            r"(?<=[관실단])\s*[과와]\s+(?=[가-힣])", ", ", chunk
-        )
-        # 단위명 토큰화: 한글 묶음으로 끝나는 위 접미사 매칭
-        for tok in re.split(r"\s*[,ㆍ·]\s*|\s+(?:및|또는)\s+|\s{2,}", chunk):
-            tok = tok.strip()
-            if not tok:
-                continue
-            m_unit = re.match(
-                r"^([가-힣]{2,14}(?:담당관|단|실|과|관))$", tok
+        for chunk in chunks:
+            chunk = re.sub(r"<[^>]+>|\([^)]*\)", "", chunk)
+            # 접속조사 "과/와"를 구분자로 전환 (관·실·단·담당관 뒤)
+            chunk = re.sub(
+                r"(?<=[관실단])\s*[과와]\s+(?=[가-힣])", ", ", chunk
             )
-            if not m_unit:
-                continue
-            nm = m_unit.group(1)
-            if nm in _BOSWA_GENERIC:
-                continue
-            if nm not in boja_seen:
-                boja_seen.add(nm)
-                boja_names.append(nm)
+            for tok in re.split(r"\s*[,ㆍ·]\s*|\s+(?:및|또는)\s+|\s{2,}", chunk):
+                tok = tok.strip()
+                if not tok:
+                    continue
+                m_unit = re.match(
+                    r"^([가-힣]{2,14}(?:담당관|단|실|과|관))$", tok
+                )
+                if not m_unit:
+                    continue
+                nm = m_unit.group(1)
+                if nm in _BOSWA_GENERIC:
+                    continue
+                if nm not in boja_seen:
+                    boja_seen.add(nm)
+                    boja_names.append(nm)
         # 첫 매칭 보좌기관 조문번호 기억
         if not boja_art_ref:
             num_raw = a.get("조문번호", "")
@@ -1482,15 +1502,18 @@ def parse_gwangyeok_generic(
         for u in structure
     )
 
+    # 보좌기관으로 이동 가능한 type 집합 (보조기관 실·국·본부는 이동 대상 제외)
+    _BOSWA_MOVABLE = {"담당관", "관", "보좌기관", "단", "과"}
+
     if boja_names and not has_group:
-        # 기존 level-1 standalone 단위 중 boja_names에 매칭되는 것을 그룹 자식으로 이동
+        # 기존 level-1 standalone 단위 중 boja_names에 매칭되는 보좌기관 계열만 이동
         moved: dict = {}
         kept: list = []
         for u in structure:
             if (u.get("level") == 1
                     and u.get("name") in boja_seen
-                    and not u.get("children")):
-                # children이 없는 단순 leaf만 흡수 (국 본부 등 자식 보유 단위는 별개)
+                    and not u.get("children")
+                    and u.get("type") in _BOSWA_MOVABLE):
                 moved[u["name"]] = u
             else:
                 kept.append(u)
@@ -1504,6 +1527,10 @@ def parse_gwangyeok_generic(
                 child["type"] = _suffix_for(nm)
                 child["id"] = build_id(code, "보좌기관", nm)
                 children.append(child)
+                continue
+            # kept에 이미 있는 단위는 보좌기관 children으로 중복 생성하지 않음
+            # (보조기관·유아동 보유 담당관 등 중복 방지)
+            if any(u["name"] == nm for u in kept):
                 continue
             # 새로 생성 — 시행규칙 우선, 없으면 조례 본문 활용
             rule_art = rule_articles_by_title.get(nm)
@@ -1542,7 +1569,7 @@ def parse_gwangyeok_generic(
             )
             structure.append({
                 "id": build_id(code, "보좌기관"),
-                "type": "관",
+                "type": "보좌기관",
                 "name": "보좌기관",
                 "level": 1,
                 "head_position": "보좌기관",
@@ -1555,7 +1582,13 @@ def parse_gwangyeok_generic(
                 "children": children,
             })
 
-    # 직속기관 처리 (절 헤더에서 기관명 추출)
+    # 한시기구 처리
+    hansi_units = _extract_hansi_units(all_ord_arts, code)
+    for hu in hansi_units:
+        if not any(n["name"] == hu["name"] for n in structure):
+            structure.append(hu)
+
+    # 직속기관/사업소/출장소/하부행정기관 처리 (챕터·절 헤더 기반)
     agencies = _extract_agencies_generic(all_ord_arts, code)
     for ag in agencies:
         if "삭제" not in ag["name"]:
@@ -1613,16 +1646,138 @@ def parse_gwangyeok_generic(
     return output
 
 
+def _parse_flat_duties_by_unit(content: str) -> dict:
+    """'번호. 기관명가. ...나. ...' 형식 분장사무를 기관명→항목 dict로 반환.
+    '실ㆍ과의 설치' 조문 ② 이후 구간에서 사용 (진도군형).
+    """
+    m_sec = re.search(r"[②](.+)", content, re.DOTALL)
+    section = m_sec.group(1) if m_sec else content
+    UNIT_PAT = re.compile(
+        r"(?<!\d)\d+\.\s*([가-힣]{2,20}(?:과|실|단|국|관|원|소|기관))"
+        r"(?=[가나다라마바사아자차카타파하]\.)"
+    )
+    positions = [(m.start(), m.end(), m.group(1)) for m in UNIT_PAT.finditer(section)]
+    result = {}
+    for i, (start, end, unit_name) in enumerate(positions):
+        next_start = positions[i + 1][0] if i + 1 < len(positions) else len(section)
+        unit_text = section[end:next_start]
+        unit_text = re.sub(r"([가나다라마바사아자차카타파하])\.\s*", r"\n\1. ", unit_text)
+        duties = []
+        for line in unit_text.split("\n"):
+            line = line.strip()
+            if re.match(r"^[가나다라마바사아자차카타파하]\.\s*", line):
+                duty = re.sub(r"^[가나다라마바사아자차카타파하]\.\s*", "", line).strip()
+                if duty:
+                    duties.append(duty)
+        if duties:
+            result[unit_name] = duties
+    return result
+
+
+def _extract_names_from_sojan(content: str) -> list[str]:
+    """소장 조문에서 기관명 추출: 'X에 소장을' 패턴"""
+    names = []
+    for m in re.finditer(
+        r"([가-힣]{2,20}(?:사업소|출장소|센터))\s*에\s*(?:소장|지소장|원장)",
+        content,
+    ):
+        nm = m.group(1)
+        if nm not in names:
+            names.append(nm)
+    return names
+
+
+def _parse_agency_duties_by_unit(content: str) -> dict:
+    """'번호. X사업소장가. ...나. ...' 형식 소관사무를 기관명→항목 dict로 반환."""
+    AGENCY_PAT = re.compile(
+        r"(?<!\d)\d+\.\s*([가-힣]{2,20}(?:사업소|출장소|센터|원|소))\s*(?:소장|장)?"
+        r"(?=[가나다라마바사아자차카타파하]\.)"
+    )
+    positions = [(m.start(), m.end(), m.group(1)) for m in AGENCY_PAT.finditer(content)]
+    result = {}
+    for i, (start, end, unit_name) in enumerate(positions):
+        next_start = positions[i + 1][0] if i + 1 < len(positions) else len(content)
+        unit_text = content[end:next_start]
+        unit_text = re.sub(r"([가나다라마바사아자차카타파하])\.\s*", r"\n\1. ", unit_text)
+        duties = []
+        for line in unit_text.split("\n"):
+            line = line.strip()
+            if re.match(r"^[가나다라마바사아자차카타파하]\.\s*", line):
+                duty = re.sub(r"^[가나다라마바사아자차카타파하]\.\s*", "", line).strip()
+                if duty:
+                    duties.append(duty)
+        if duties:
+            result[unit_name] = duties
+    return result
+
+
+def _chapter_type(chapter_content: str) -> tuple[str, bool]:
+    """챕터 헤더 텍스트에서 (unit_type, skip) 반환.
+    skip=True → 챕터 전체 건너뜀 (읍·면·동 하부행정기관).
+    """
+    c = chapter_content
+    if re.search(r"사업소", c):
+        return "사업소", False
+    if re.search(r"출장소", c):
+        return "출장소", False
+    if re.search(r"의회", c):
+        return "의회사무기구", False
+    if re.search(r"읍|면|동|하부행정기관", c):
+        return "SKIP", True
+    return "직속기관", False
+
+
 def _extract_agencies_generic(all_arts: list[dict], code: str) -> list[dict]:
-    """직속기관 섹션(제3장 이후)에서 절 헤더 기반으로 기관 추출"""
+    """제3장 이후 챕터에서 직속기관/사업소/출장소 추출.
+    챕터명으로 type 결정, 절 헤더로 기관명 결정.
+    절 헤더 없는 챕터(진도군형)는 소장 조문에서 기관명, 소관사무에서 분장사무 추출.
+    읍·면·동 하부행정기관 챕터는 건너뜀.
+    """
     agencies = []
     in_agency_chapter = False
+    current_chapter_type = "직속기관"
+    current_section_type = "직속기관"
     current_name = None
     install_content = ""
     duty_content = ""
     install_ref = ""
+    # 절 헤더 없는 챕터 처리용
+    no_section_names: list = []
+    no_section_install = ""
+    no_section_duty = ""
+    no_section_ref = ""
+    chapter_label = ""
     CHAPTER_PAT = re.compile(r"제(\d+)장")
     SECTION_PAT = re.compile(r"제\d+절\s+(.+)")
+
+    def _flush_current():
+        if current_name:
+            agencies.append(_make_agency_node(
+                code, current_name, install_content, duty_content,
+                install_ref, current_section_type
+            ))
+
+    def _flush_no_section():
+        if no_section_names:
+            duty_by_name = _parse_agency_duties_by_unit(no_section_duty)
+            for nm in no_section_names:
+                d = duty_by_name.get(nm, [])
+                node = _make_agency_node(
+                    code, nm, no_section_install, no_section_duty,
+                    no_section_ref, current_chapter_type
+                )
+                if d:
+                    node["분장사무_항목"] = d
+                    node["키워드_태그"] = apply_keywords(
+                        nm + " " + no_section_install + " " + " ".join(d)
+                    )
+                agencies.append(node)
+        elif no_section_install or no_section_duty:
+            ag_name = chapter_label or current_chapter_type
+            agencies.append(_make_agency_node(
+                code, ag_name, no_section_install, no_section_duty,
+                no_section_ref, current_chapter_type
+            ))
 
     for a in all_arts:
         is_art = a.get("조문여부", "")
@@ -1631,52 +1786,143 @@ def _extract_agencies_generic(all_arts: list[dict], code: str) -> list[dict]:
 
         if is_art == "N":
             m_ch = CHAPTER_PAT.search(content)
-            if m_ch and int(m_ch.group(1)) >= 3:
-                in_agency_chapter = True
-            elif m_ch and int(m_ch.group(1)) < 3:
-                in_agency_chapter = False
-            if in_agency_chapter:
+            if m_ch:
+                ch_num = int(m_ch.group(1))
+                if ch_num < 3:
+                    _flush_current()
+                    _flush_no_section()
+                    in_agency_chapter = False
+                    current_name = None
+                    no_section_names = []
+                    no_section_install = no_section_duty = no_section_ref = ""
+                    chapter_label = ""
+                else:
+                    _flush_current()
+                    _flush_no_section()
+                    chapter_type, should_skip = _chapter_type(content)
+                    if should_skip:
+                        in_agency_chapter = False
+                        current_name = None
+                        no_section_names = []
+                        no_section_install = no_section_duty = no_section_ref = ""
+                        chapter_label = ""
+                    else:
+                        in_agency_chapter = True
+                        current_chapter_type = chapter_type
+                        current_section_type = chapter_type
+                        current_name = None
+                        install_content = duty_content = install_ref = ""
+                        no_section_names = []
+                        no_section_install = no_section_duty = no_section_ref = ""
+                        raw = re.sub(r"제\d+장\s*", "", content).strip()
+                        raw = re.sub(r"\s*[<〈][^>〉]+[>〉].*", "", raw).strip()
+                        chapter_label = raw or chapter_type
+            elif in_agency_chapter:
                 m_sec = SECTION_PAT.search(content)
                 if m_sec:
-                    if current_name:
-                        agencies.append(_make_agency_node(
-                            code, current_name, install_content,
-                            duty_content, install_ref
-                        ))
+                    _flush_current()
+                    _flush_no_section()
+                    no_section_names = []
+                    no_section_install = no_section_duty = no_section_ref = ""
                     raw_name = m_sec.group(1).strip()
                     clean_name = re.sub(r"\s*[<〈][^>〉]+[>〉]", "", raw_name).strip()
-                    current_name = None if _SKIP_AGENCY_NAMES.search(clean_name) else clean_name
-                    install_content = ""
-                    duty_content = ""
-                    install_ref = ""
+                    if re.search(r"사업소", clean_name):
+                        current_section_type = "사업소"
+                    elif re.search(r"출장소", clean_name):
+                        current_section_type = "출장소"
+                    else:
+                        current_section_type = current_chapter_type
+                    _SKIP_SEC = re.compile(r"실[·ㆍ]국|실·국|실ㆍ국|지방자치단체가\s*아닌")
+                    current_name = None if _SKIP_SEC.search(clean_name) else clean_name
+                    install_content = duty_content = install_ref = ""
             continue
 
-        if not in_agency_chapter or not current_name:
+        if not in_agency_chapter:
             continue
+
         if "삭제" in content[:20]:
             continue
 
         num_raw = a.get("조문번호", "")
         art_ref = article_num_to_str(num_raw)
-        if 조제목 in ("설치", "소관사무", "목적"):
+
+        if not current_name:
+            # 절 헤더 없는 챕터 — 소장/설치/소관사무 조문에서 기관 정보 수집
+            if 조제목 == "소장":
+                no_section_names = _extract_names_from_sojan(content)
+            elif 조제목 == "설치":
+                no_section_install = content
+                no_section_ref = f"조례 {art_ref}"
+            elif 조제목 in ("소관사무", "관장사무"):
+                no_section_duty = content
+            continue
+
+        if 조제목 in ("설치", "소관사무", "목적", "관장사무"):
             if 조제목 == "설치":
                 install_content = content
                 install_ref = f"조례 {art_ref}"
             else:
                 duty_content = content
 
-    if current_name:
-        agencies.append(_make_agency_node(
-            code, current_name, install_content, duty_content, install_ref
-        ))
+    _flush_current()
+    _flush_no_section()
     return agencies
 
 
-def _make_agency_node(code, name, install_txt, duty_txt, install_ref):
+def _extract_hansi_units(all_arts: list[dict], code: str) -> list[dict]:
+    """'한시기구' 조문에서 한시기구 목록 추출"""
+    units = []
+    for a in all_arts:
+        if a.get("조문여부") != "Y":
+            continue
+        조제목 = (a.get("조제목", "") or "").strip()
+        if 조제목 != "한시기구":
+            continue
+        content = get_content(a)
+        if "삭제" in content[:20]:
+            continue
+        num_raw = a.get("조문번호", "")
+        art_ref = article_num_to_str(num_raw) if num_raw else ""
+        # "한시기구로 X를 둔다" 또는 "한시적으로 X를 둔다" 또는 직접 서술
+        found_names = []
+        for m in re.finditer(
+            r"한시(?:기구로|적으로|기구)?\s*(?:[가-힣\s]*에\s*)?([가-힣]{2,20}(?:단|팀|과|국|추진단|위원회|기구))\s*[을를]\s*둔다",
+            content,
+        ):
+            found_names.append(m.group(1).strip())
+        # fallback: "X단을 두며" / "X를 두고" 형태
+        if not found_names:
+            for m in re.finditer(
+                r"([가-힣]{2,20}(?:단|팀|과|국|추진단|위원회|기구))\s*[을를]\s*두(?:며|고|어)",
+                content,
+            ):
+                nm = m.group(1).strip()
+                if nm not in found_names:
+                    found_names.append(nm)
+        for name in found_names:
+            units.append({
+                "id": build_id(code, name),
+                "type": "한시기구",
+                "name": name,
+                "level": 1,
+                "head_position": name + "장",
+                "head_grade": "",
+                "정원": None,
+                "근거조문": f"조례 {art_ref}".strip(),
+                "분장사무_원문": content,
+                "분장사무_항목": parse_duties(content),
+                "키워드_태그": apply_keywords(name + " " + content),
+                "children": [],
+            })
+    return units
+
+
+def _make_agency_node(code, name, install_txt, duty_txt, install_ref,
+                      unit_type="직속기관"):
     combined = install_txt + " " + duty_txt
     return {
-        "id": build_id(code, "직속기관", name),
-        "type": "직속기관",
+        "id": build_id(code, unit_type, name),
+        "type": unit_type,
         "name": name,
         "level": 1,
         "head_position": name + "장",

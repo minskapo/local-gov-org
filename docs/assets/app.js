@@ -3,7 +3,12 @@ import MiniSearch from 'https://esm.sh/minisearch@7.1.1'
 import { loadIndex, loadAggregates, loadRegion, loadKeyword, loadSearchDocs } from './api.js'
 
 const KW_ORDER = ['기후','환경','에너지','녹지_생태','교통','복지','재난_안전','도시_건축','경제_산업','행정_기획','문화_교육','보건_위생']
-const TYPE_ORDER = ['국','실','본부','단','관','처','담당관','직속기관','과']
+const TYPE_ORDER = [
+  '국','실','본부','단','관','처',
+  '보좌기관','담당관','한시기구',
+  '직속기관','사업소','출장소',
+  '과',
+]
 
 function parseHash(hash) {
   const h = (hash || location.hash).replace(/^#/, '') || '/'
@@ -41,7 +46,7 @@ Alpine.data('mainApp', () => ({
   searchDocs: null,   // 검색 인덱스 배열 — 기구유형별 뷰와 공유
 
   // ── 광역 비교 ─────────────────────────────────────────────
-  compareTypes: ['국','실','본부','단','관'],
+  compareTypes: ['국','실','본부','단','보좌기관','직속기관','사업소'],
 
   // ── 검색 ─────────────────────────────────────────────────
   searchQuery: '',
@@ -79,6 +84,13 @@ Alpine.data('mainApp', () => ({
   get maxKwCount() {
     const d = this.aggregates?.['전국_키워드별'] || {}
     return Math.max(1, ...Object.values(d))
+  },
+  get maxTypeCount() {
+    const d = this.aggregates?.['전국_기구유형별'] || {}
+    return Math.max(1, ...Object.values(d))
+  },
+  get typeCountFor() {
+    return (t) => this.aggregates?.['전국_기구유형별']?.[t] || 0
   },
   get childRegions() {
     if (!this.selectedRegion) return []

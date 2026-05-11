@@ -33,8 +33,11 @@ C = {
 
 TYPE_COLORS = {
     "국": "DBEAFE", "실": "F3E8FF", "본부": "FEF9C3",
-    "단": "FFEDD5", "관": "DCFCE7", "직속기관": "F1F5F9",
-    "담당관": "FDF4FF", "과": "FFFFFF", "처": "FEE2E2",
+    "단": "FFEDD5", "관": "DCFCE7", "처": "FEE2E2",
+    "보좌기관": "F5D0FE", "담당관": "FDF4FF",
+    "직속기관": "F1F5F9", "사업소": "FFF7ED", "출장소": "FFFBEB",
+    "하부행정기관": "F0FDF4", "한시기구": "FEF2F2",
+    "과": "FFFFFF",
 }
 
 
@@ -81,7 +84,8 @@ def build_summary_sheet(ws, records, code_to_name=None):
     COLS = [
         ("지자체코드", 10), ("지자체명", 18), ("광역/기초", 9),
         ("지자체유형", 12), ("상위지자체", 14), ("총정원(명)", 11),
-        ("본청 최상위기구", 10), ("하위기구 합계", 10), ("직속기관 수", 10),
+        ("본청 보조기관", 10), ("보좌기관", 8), ("한시기구", 8),
+        ("직속기관", 9), ("사업소", 8), ("하부행정기관", 10),
         ("국·실·본부", 10), ("과·담당관 (하위)", 13),
     ]
 
@@ -101,10 +105,14 @@ def build_summary_sheet(ws, records, code_to_name=None):
         totals = d.get("totals", {})
         structure = d.get("structure", [])
 
-        top_units = [n for n in structure if n.get("type") != "직속기관"]
-        agencies = [n for n in structure if n.get("type") == "직속기관"]
-        children_total = sum(len(n.get("children", [])) for n in top_units)
-        주요기구 = [n for n in top_units if n.get("type") in ("국","실","본부","단","관","처")]
+        _OUTER = {"직속기관", "사업소", "출장소", "하부행정기관", "한시기구", "보좌기관"}
+        본청보조 = [n for n in structure if n.get("type") not in _OUTER]
+        보좌기관_units = [n for n in structure if n.get("type") == "보좌기관"]
+        한시기구_units = [n for n in structure if n.get("type") == "한시기구"]
+        직속기관_units = [n for n in structure if n.get("type") == "직속기관"]
+        사업소_units   = [n for n in structure if n.get("type") in ("사업소", "출장소")]
+        하부행정기관_u = [n for n in structure if n.get("type") == "하부행정기관"]
+        주요기구 = [n for n in 본청보조 if n.get("type") in ("국","실","본부","단","관","처")]
         하위기구 = sum(len(n.get("children",[])) for n in 주요기구)
 
         vals = [
@@ -114,9 +122,12 @@ def build_summary_sheet(ws, records, code_to_name=None):
             reg.get("type",""),
             resolve_parent_name(reg, code_to_name or {}),
             totals.get("정원_총", 0) or 0,
-            len(top_units),
-            children_total,
-            len(agencies),
+            len(본청보조),
+            len(보좌기관_units),
+            len(한시기구_units),
+            len(직속기관_units),
+            len(사업소_units),
+            len(하부행정기관_u),
             len(주요기구),
             하위기구,
         ]
@@ -236,7 +247,12 @@ def build_stats_sheet(ws, records):
     ws.title = "기구유형별 통계"
 
     # 유형별 집계
-    TYPES = ["국", "실", "본부", "단", "관", "처", "담당관", "과", "직속기관"]
+    TYPES = [
+        "국", "실", "본부", "단", "관", "처",
+        "보좌기관", "담당관", "한시기구",
+        "직속기관", "사업소", "출장소", "하부행정기관",
+        "과",
+    ]
     COLS = ["지자체코드","지자체명","광역/기초","지자체유형","총정원"] + TYPES + ["전체기구수"]
 
     widths = [9,16,8,10,10] + [7]*len(TYPES) + [9]

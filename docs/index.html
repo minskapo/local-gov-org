@@ -58,6 +58,9 @@
       <div class="stats-bar">
         <div class="stat"><span x-text="index.length"></span>개 지자체</div>
         <div class="stat"><span x-text="totalUnits.toLocaleString()"></span>개 행정기구</div>
+        <div class="stat">국·실·본부 <span x-text="((aggregates?.['전국_기구유형별']?.['국']||0)+(aggregates?.['전국_기구유형별']?.['실']||0)+(aggregates?.['전국_기구유형별']?.['본부']||0)).toLocaleString()"></span>개</div>
+        <div class="stat">직속기관 <span x-text="(aggregates?.['전국_기구유형별']?.['직속기관']||0).toLocaleString()"></span>개</div>
+        <div class="stat">사업소 <span x-text="(aggregates?.['전국_기구유형별']?.['사업소']||0).toLocaleString()"></span>개</div>
         <div class="stat">광역정원 <span x-text="totalStaff.toLocaleString()"></span>명</div>
       </div>
 
@@ -95,6 +98,24 @@
           <div class="gicheo-card" @click="navigate('/region/'+r.code)">
             <span class="gicheo-name" x-text="r.short_name"></span>
             <span class="gicheo-meta" x-text="r.기구수+'개'"></span>
+          </div>
+        </template>
+      </div>
+
+      <!-- 기구유형별 분포 -->
+      <div class="section-title" style="margin-top:2rem">기구유형별 분포 (전국)</div>
+      <div class="type-bars">
+        <template x-for="t in typeOrder" :key="t">
+          <div class="type-bar-row" @click="navigate('/types/'+t)" title="기구유형별 보기">
+            <div class="type-bar-label">
+              <span class="type-badge" :class="'badge-'+t" x-text="t"></span>
+            </div>
+            <div class="type-bar-wrap">
+              <div class="type-bar" :class="'bar-'+t"
+                :style="'width:'+((aggregates?.['전국_기구유형별']?.[t]||0)/maxTypeCount*100)+'%'">
+              </div>
+              <span class="type-bar-val" x-text="(aggregates?.['전국_기구유형별']?.[t]||0).toLocaleString()"></span>
+            </div>
           </div>
         </template>
       </div>
@@ -324,11 +345,13 @@
     <!-- ════ 기구유형별 ════ -->
     <div x-show="view==='types'" class="types-view">
       <h2>기구유형별 조회</h2>
-      <p class="help-text">유형을 선택하면 전국 모든 해당 기구가 표시됩니다. (검색 인덱스 로드 필요)</p>
       <div class="type-chips">
         <template x-for="t in typeOrder" :key="t">
           <button class="type-chip" :class="{active: selectedType===t, ['badge-'+t]: true}"
-            @click="selectType(t)" x-text="t"></button>
+            @click="selectType(t)">
+            <span x-text="t"></span>
+            <span class="type-chip-count" x-text="'('+((aggregates?.['전국_기구유형별']?.[t]||0).toLocaleString())+')'"></span>
+          </button>
         </template>
       </div>
       <template x-if="selectedType && searchDocs">
@@ -355,8 +378,8 @@
           </div>
         </div>
       </template>
-      <template x-if="selectedType && !searchDocs && loading">
-        <div class="loading-msg">데이터 로딩 중…</div>
+      <template x-if="selectedType && !searchDocs && !loading">
+        <div class="loading-msg">유형을 선택하면 전국 기구 목록을 불러옵니다.</div>
       </template>
     </div><!-- /types -->
 
