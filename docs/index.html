@@ -441,20 +441,26 @@
 
       <!-- 필터 -->
       <div class="units-filters">
-        <select class="units-filter-sel" x-model="unitsFilter.gw" @change="unitsPage=0">
+        <select class="units-filter-sel" x-model="unitsFilter.gw" @change="unitsFilter.gi=''">
           <option value="">광역 전체</option>
           <template x-for="opt in unitsGwOptions" :key="opt">
             <option :value="opt" x-text="opt"></option>
           </template>
         </select>
-        <select class="units-filter-sel" x-model="unitsFilter.type" @change="unitsPage=0">
+        <select class="units-filter-sel" x-model="unitsFilter.gi" :disabled="!unitsGiOptions.length">
+          <option value="">기초 전체</option>
+          <template x-for="opt in unitsGiOptions" :key="opt.code">
+            <option :value="opt.code" x-text="opt.label"></option>
+          </template>
+        </select>
+        <select class="units-filter-sel" x-model="unitsFilter.type">
           <option value="">기구유형 전체</option>
           <template x-for="t in typeOrder" :key="t">
             <option :value="t" x-text="t"></option>
           </template>
         </select>
         <input class="units-filter-input" type="text" placeholder="상위기구명 검색…"
-          x-model="unitsFilter.name" @input="unitsPage=0">
+          x-model="unitsFilter.name">
         <span class="units-count" x-show="unitsRows.length">
           <strong x-text="unitsFiltered.length.toLocaleString()"></strong>개 기구
         </span>
@@ -492,16 +498,23 @@
                 </tr>
               </thead>
               <tbody>
-                <template x-for="row in unitsFiltered" :key="row.code+'#'+row.parentName">
+                <template x-for="row in unitsDisplayRows" :key="row.code+'#'+row.parentName">
                   <tr :class="{
+                    'urow-region-start': row.showRegion,
                     'urow-보좌기관': row.parentType==='보좌기관',
                     'urow-직속기관': row.parentType==='직속기관',
                     'urow-사업소':  row.parentType==='사업소',
                     'urow-출장소':  row.parentType==='출장소',
                   }">
-                    <td class="units-code-cell" x-text="row.code"></td>
-                    <td class="units-gw-cell" x-text="row.gwName"></td>
-                    <td class="units-gi-cell" x-text="row.giName"></td>
+                    <td class="units-code-cell">
+                      <span x-show="row.showRegion" x-text="row.code"></span>
+                    </td>
+                    <td class="units-gw-cell">
+                      <span x-show="row.showRegion" x-text="row.gwName"></span>
+                    </td>
+                    <td class="units-gi-cell">
+                      <span x-show="row.showRegion" x-text="row.giName"></span>
+                    </td>
                     <td><span class="type-badge" :class="'badge-'+row.parentType" x-text="row.parentType"></span></td>
                     <td>
                       <span class="unit-link" :class="{'has-summary': !!row.parentSummary}"
@@ -522,6 +535,12 @@
               </tbody>
             </table>
           </div>
+          <template x-if="unitsTruncated">
+            <div class="units-truncate-msg">
+              전체 <strong x-text="unitsFiltered.length.toLocaleString()"></strong>개 기구 중 500개만 표시됩니다.
+              광역·기초·유형 필터를 적용하면 전체 결과를 확인할 수 있습니다.
+            </div>
+          </template>
       </template>
     </div><!-- /units -->
 

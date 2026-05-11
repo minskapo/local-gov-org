@@ -44,7 +44,7 @@ Alpine.data('mainApp', () => ({
 
   // ── 전체 기구 현황 ────────────────────────────────────────
   unitsRows: [],
-  unitsFilter: { gw: '', type: '', name: '' },
+  unitsFilter: { gw: '', gi: '', type: '', name: '' },
   unitsSortCol: '',
   unitsSortDir: 1,
   unitsPage: 0,
@@ -155,10 +155,17 @@ Alpine.data('mainApp', () => ({
   get unitsGwOptions() {
     return this.gwangyeok.map(r => r.name)
   },
+  get unitsGiOptions() {
+    const gw = this.unitsFilter.gw
+    return this.index.filter(r =>
+      r.level === '기초' && (!gw || r.parent_name === gw)
+    ).map(r => ({ code: r.code, label: r.short_name }))
+  },
   get unitsFiltered() {
-    const { gw, type, name } = this.unitsFilter
+    const { gw, gi, type, name } = this.unitsFilter
     let rows = this.unitsRows
     if (gw)   rows = rows.filter(r => r.gwName === gw)
+    if (gi)   rows = rows.filter(r => r.code === gi)
     if (type) rows = rows.filter(r => r.parentType === type)
     if (name) { const q = name.toLowerCase(); rows = rows.filter(r => r.parentName.toLowerCase().includes(q)) }
     if (!this.unitsSortCol) return rows
@@ -174,12 +181,18 @@ Alpine.data('mainApp', () => ({
   get unitsChildIndices() {
     return Array.from({ length: this.unitsMaxChildren }, (_, i) => i)
   },
-  get unitsTotalPages() {
-    return Math.max(1, Math.ceil(this.unitsFiltered.length / 100))
+  get unitsDisplayRows() {
+    const MAX = 500
+    const rows = this.unitsFiltered.slice(0, MAX)
+    let lastCode = null
+    return rows.map(row => {
+      const showRegion = row.code !== lastCode
+      lastCode = row.code
+      return { ...row, showRegion }
+    })
   },
-  get unitsPageRows() {
-    const s = this.unitsPage * 100
-    return this.unitsFiltered.slice(s, s + 100)
+  get unitsTruncated() {
+    return this.unitsFiltered.length > 500
   },
 
   // kwsearch 뷰 표시용 평탄 행 목록

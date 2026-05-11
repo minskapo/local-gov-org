@@ -494,10 +494,19 @@ button { cursor: pointer; font: inherit; }
 .units-gi-cell { color: var(--clr-muted); }
 .units-child-cell { min-width: 100px; }
 
+.units-truncate-msg {
+  margin-top: .75rem; padding: .6rem .85rem;
+  background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--radius);
+  font-size: .82rem; color: #92400E;
+}
+
 /* 클릭 가능한 기구명 */
 .unit-link { cursor: default; }
 .unit-link.has-summary { cursor: pointer; color: var(--clr-accent); }
 .unit-link.has-summary:hover { text-decoration: underline; }
+
+/* 지자체 그룹 구분선 */
+.urow-region-start td { border-top: 2px solid #CBD5E1; }
 
 /* 행 유형별 배경색 */
 .urow-보좌기관 td { background: #fdf4ff; }
