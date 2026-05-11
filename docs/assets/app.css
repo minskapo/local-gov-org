@@ -379,6 +379,122 @@ button { cursor: pointer; font: inherit; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── 광역+기초 그룹 레이아웃 (개요) ──────────────────────── */
+.gwangyeok-section {
+  display: flex; gap: 1rem; margin-bottom: 1.25rem; align-items: flex-start;
+  padding-bottom: 1.25rem; border-bottom: 1px solid var(--clr-border);
+}
+.gwangyeok-section:last-child { border-bottom: none; }
+
+.gw-section-card {
+  flex: 0 0 160px; background: var(--clr-primary); color: #fff;
+  border-radius: var(--radius); padding: .7rem .9rem; cursor: pointer;
+  transition: opacity .15s;
+}
+.gw-section-card:hover { opacity: .85; }
+.gw-section-name { font-size: .95rem; font-weight: 700; margin-bottom: .25rem; }
+.gw-section-meta { font-size: .73rem; opacity: .8; margin-bottom: .4rem; }
+
+.gicheo-section { flex: 1; display: flex; flex-wrap: wrap; gap: .4rem; align-content: flex-start; }
+
+/* ── 지자체 비교 확장 ────────────────────────────────────── */
+.compare-hint { font-size: .78rem; color: var(--clr-muted); margin-bottom: .6rem; }
+.gw-compare-row {
+  background: #F1F5F9; font-weight: 600; cursor: pointer;
+}
+.gw-compare-row:hover td { background: #E2E8F0 !important; }
+.gw-compare-name { display: flex; align-items: center; }
+.expand-icon { color: var(--clr-muted); font-size: .75rem; margin-right: .2rem; }
+.gi-compare-row { background: #fff; }
+.gi-compare-row:hover td { background: #EFF6FF; }
+.gi-compare-name { color: var(--clr-muted); }
+.indent-mark { color: #CBD5E1; margin-right: .2rem; }
+
+/* ── 키워드 검색 ─────────────────────────────────────────── */
+.kwsearch-view h2 { margin-bottom: .75rem; }
+.kwsearch-form { display: flex; gap: .5rem; margin-bottom: .5rem; }
+.kwsearch-input {
+  flex: 1; padding: .5rem .8rem; border: 1px solid var(--clr-border);
+  border-radius: 6px; font-size: .9rem; outline: none;
+}
+.kwsearch-input:focus { border-color: var(--clr-accent); }
+.kwsearch-btn {
+  padding: .5rem 1.1rem; background: var(--clr-primary); color: #fff;
+  border: none; border-radius: 6px; font-size: .9rem;
+}
+.kwsearch-btn:hover { background: var(--clr-primary-lt); }
+.kwsearch-hint {
+  font-size: .78rem; color: var(--clr-muted); margin-bottom: 1rem;
+}
+.kwsearch-hint code {
+  background: #F1F5F9; padding: .1rem .35rem; border-radius: 3px; font-size: .78rem;
+}
+.kwsearch-placeholder {
+  padding: 3rem; text-align: center; color: var(--clr-muted); line-height: 2;
+}
+
+.kwsearch-results { margin-top: .5rem; }
+
+.kwsearch-gwheader {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .45rem .6rem; margin-top: .5rem;
+  background: var(--clr-primary); color: #fff; border-radius: 4px;
+  cursor: pointer; font-size: .82rem; font-weight: 600;
+}
+.kwsearch-gwheader:hover { opacity: .9; }
+.kwsearch-gwname { flex: 1; }
+.kwsearch-gwmeta { font-size: .72rem; opacity: .75; font-weight: 400; }
+
+.kwsearch-row {
+  display: flex; align-items: flex-start; gap: .6rem;
+  padding: .35rem .4rem .35rem .6rem;
+  border-bottom: 1px solid #F1F5F9; min-height: 32px;
+}
+.kwsearch-row:hover { background: #F8FAFC; }
+.gw-result-row { background: #F8FAFC; }
+
+.kwsearch-region {
+  flex: 0 0 90px; font-size: .8rem; font-weight: 500; cursor: pointer;
+  color: var(--clr-accent); white-space: nowrap; padding-top: .15rem;
+}
+.kwsearch-region:hover { text-decoration: underline; }
+.kwsearch-region.gw-self { color: var(--clr-text); font-weight: 600; }
+.level-badge {
+  display: inline-block; font-size: .65rem; background: var(--clr-primary);
+  color: #fff; padding: .05rem .3rem; border-radius: 3px; margin-left: .3rem; vertical-align: middle;
+}
+
+.kwsearch-matches {
+  flex: 1; display: flex; flex-wrap: wrap; gap: .3rem .2rem; align-content: flex-start;
+}
+.kwsearch-empty { font-size: .78rem; color: #CBD5E1; padding-top: .15rem; }
+
+.kwsearch-group {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .15rem;
+  padding: .1rem .3rem; border-radius: 4px;
+  border: 1px solid var(--clr-border); margin-right: .2rem; margin-bottom: .2rem;
+  background: #fff;
+}
+.kwsearch-unit {
+  font-size: .78rem; color: var(--clr-text); white-space: nowrap;
+}
+.kwsearch-unit.hit {
+  background: #FEF08A; font-weight: 700; padding: 0 .2rem; border-radius: 3px;
+}
+.kwsearch-child {
+  font-size: .76rem; color: var(--clr-muted); white-space: nowrap; display: inline-flex; align-items: center;
+}
+.kwsearch-child.hit { color: var(--clr-text); font-weight: 600; }
+.kwsearch-child.hit span:last-child { background: #FEF08A; padding: 0 .2rem; border-radius: 3px; }
+.kws-sep { color: #CBD5E1; margin: 0 .15rem; font-size: .72rem; }
+
+/* ── 뒤로가기 링크 ──────────────────────────────────────── */
+.back-link {
+  font-size: .8rem; color: rgba(255,255,255,.7); background: var(--clr-primary);
+  padding: .2rem .5rem; border-radius: 4px; white-space: nowrap;
+}
+.back-link:hover { color: #fff; text-decoration: none; }
+
 /* ── 모바일 ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .header { flex-wrap: wrap; height: auto; padding: .5rem; gap: .4rem; }
@@ -389,6 +505,8 @@ button { cursor: pointer; font: inherit; }
   .tree-layout { flex-direction: column; }
   .tree-panel { flex: none; width: 100%; max-height: 45vh; }
   .detail-panel { max-height: none; }
-  .region-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .gicheo-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+  .gwangyeok-section { flex-direction: column; gap: .6rem; }
+  .gw-section-card { flex: none; width: 100%; }
+  .kwsearch-region { flex: 0 0 70px; }
 }

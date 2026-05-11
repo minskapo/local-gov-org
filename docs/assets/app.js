@@ -1,6 +1,6 @@
 import Alpine from 'https://esm.sh/alpinejs@3.14.7'
 import MiniSearch from 'https://esm.sh/minisearch@7.1.1'
-import { loadIndex, loadAggregates, loadRegion, loadKeyword, loadSearchDocs } from './api.js'
+import { loadIndex, loadAggregates, loadRegion, loadSearchDocs } from './api.js'
 
 const KW_ORDER = ['기후','환경','에너지','녹지_생태','교통','복지','재난_안전','도시_건축','경제_산업','행정_기획','문화_교육','보건_위생']
 const TYPE_ORDER = [
@@ -12,20 +12,17 @@ const TYPE_ORDER = [
 
 function parseHash(hash) {
   const h = (hash || location.hash).replace(/^#/, '') || '/'
-  if (h === '/' || h === '') return { view: 'overview', code: '', keyword: '', type: '' }
-  if (h.startsWith('/region/')) return { view: 'region', code: h.slice(8), keyword: '', type: '' }
-  if (h.startsWith('/keyword/')) return { view: 'keyword', keyword: decodeURIComponent(h.slice(9)), code: '', type: '' }
-  if (h === '/compare')          return { view: 'compare', code: '', keyword: '', type: '' }
-  if (h.startsWith('/types'))    return { view: 'types', type: h.slice(7).replace(/^\//,''), code: '', keyword: '' }
-  return { view: 'overview', code: '', keyword: '', type: '' }
+  if (h === '/' || h === '')         return { view: 'overview', code: '' }
+  if (h.startsWith('/region/'))      return { view: 'region',   code: h.slice(8) }
+  if (h === '/compare')              return { view: 'compare',  code: '' }
+  if (h.startsWith('/kwsearch'))     return { view: 'kwsearch', code: '' }
+  return { view: 'overview', code: '' }
 }
 
 Alpine.data('mainApp', () => ({
-  // ── 라우터 상태 ──────────────────────────────────────────
+  // ── 라우터 ──────────────────────────────────────────────
   view: 'overview',
   currentCode: '',
-  currentKeyword: '',
-  currentType: '',
   loading: false,
 
   // ── 공통 데이터 ──────────────────────────────────────────
@@ -37,38 +34,38 @@ Alpine.data('mainApp', () => ({
   selectedUnit: null,
   selectedParentUnit: null,
 
-  // ── 정책분야별 ────────────────────────────────────────────
-  kwUnits: [],
-  kwFilter: '',
-
-  // ── 기구유형별 ────────────────────────────────────────────
-  selectedType: '',
-  searchDocs: null,   // 검색 인덱스 배열 — 기구유형별 뷰와 공유
-
-  // ── 광역 비교 ─────────────────────────────────────────────
+  // ── 지자체 비교 ───────────────────────────────────────────
   compareTypes: ['국','실','본부','단','보좌기관','직속기관','사업소'],
+  compareExpanded: {},
 
-  // ── 검색 ─────────────────────────────────────────────────
+  // ── 키워드 검색 ───────────────────────────────────────────
+  kwSearch: '',
+  kwResultMap: {},
+  kwSearchDone: false,
+  searchDocs: null,
+
+  // ── 헤더 검색 ────────────────────────────────────────────
   searchQuery: '',
   searchResults: [],
   searchOpen: false,
   miniSearch: null,
 
-  // ── 전역 상수 ─────────────────────────────────────────────
   kwOrder: KW_ORDER,
   typeOrder: TYPE_ORDER,
-
-  // ── 개요 뷰 상태 ──────────────────────────────────────────
-  gicheoFilterParent: '',
 
   // ── computed ─────────────────────────────────────────────
   get gwangyeok() {
     return this.index.filter(r => r.level === '광역')
   },
-  get filteredGicheo() {
-    const list = this.index.filter(r => r.level === '기초')
-    if (!this.gicheoFilterParent) return list
-    return list.filter(r => r.parent === this.gicheoFilterParent)
+  get gicheoByParent() {
+    const m = {}
+    for (const r of this.index) {
+      if (r.level === '기초') {
+        if (!m[r.parent]) m[r.parent] = []
+        m[r.parent].push(r)
+      }
+    }
+    return m
   },
   get indexMap() {
     const m = {}
@@ -81,32 +78,21 @@ Alpine.data('mainApp', () => ({
   get totalStaff() {
     return this.index.filter(r => r.level==='광역').reduce((s,r) => s + (r.정원||0), 0)
   },
-  get maxKwCount() {
-    const d = this.aggregates?.['전국_키워드별'] || {}
-    return Math.max(1, ...Object.values(d))
-  },
-  get maxTypeCount() {
-    const d = this.aggregates?.['전국_기구유형별'] || {}
-    return Math.max(1, ...Object.values(d))
-  },
-  get typeCountFor() {
-    return (t) => this.aggregates?.['전국_기구유형별']?.[t] || 0
-  },
   get childRegions() {
     if (!this.selectedRegion) return []
     const code = this.selectedRegion.region.code
     return this.index.filter(r => r.parent === code)
   },
-  get filteredKwUnits() {
-    if (!this.kwFilter.trim()) return this.kwUnits
-    const q = this.kwFilter.trim().toLowerCase()
-    return this.kwUnits.filter(u =>
-      u.unit_name.includes(q) || u.region_name.includes(q) || u.parent_name?.includes(q)
-    )
-  },
-  get filteredByType() {
-    if (!this.selectedType || !this.searchDocs) return []
-    return this.searchDocs.filter(u => u.unit_type === this.selectedType)
+  get kwSearchRows() {
+    if (!this.kwSearchDone) return []
+    const rows = []
+    for (const gw of this.gwangyeok) {
+      rows.push({ kind: 'gw', region: gw, groups: this.kwResultMap[gw.code] || [] })
+      for (const r of (this.gicheoByParent[gw.code] || [])) {
+        rows.push({ kind: 'gi', region: r, groups: this.kwResultMap[r.code] || [] })
+      }
+    }
+    return rows
   },
 
   // ── 초기화 ────────────────────────────────────────────────
@@ -119,24 +105,19 @@ Alpine.data('mainApp', () => ({
     } finally {
       this.loading = false
     }
-
-    // 라우팅
     const apply = () => this._applyRoute(parseHash(location.hash))
     window.addEventListener('hashchange', apply)
     apply()
   },
 
-  // ── 라우팅 ────────────────────────────────────────────────
   navigate(path) {
     location.hash = '#' + path
   },
 
-  async _applyRoute({ view, code, keyword, type }) {
+  async _applyRoute({ view, code }) {
     this.loading = false
     this.view = view
     this.currentCode = code
-    this.currentKeyword = keyword
-    this.currentType = type
 
     if (view === 'region' && code) {
       this.loading = true
@@ -144,33 +125,13 @@ Alpine.data('mainApp', () => ({
       this.selectedParentUnit = null
       try {
         const data = await loadRegion(code)
-        // 트리 아이템에 _open 상태 주입
-        for (const u of data.structure || []) {
-          u._open = false
-        }
+        for (const u of data.structure || []) u._open = false
         this.selectedRegion = data
       } catch (e) {
         console.error(e)
       } finally {
         this.loading = false
       }
-    }
-
-    if (view === 'keyword' && keyword) {
-      this.kwFilter = ''
-      this.loading = true
-      try {
-        this.kwUnits = await loadKeyword(keyword)
-      } catch (e) {
-        console.error(e)
-      } finally {
-        this.loading = false
-      }
-    }
-
-    if (view === 'types' && type) {
-      this.selectedType = type
-      await this._ensureSearchDocs()
     }
   },
 
@@ -180,11 +141,107 @@ Alpine.data('mainApp', () => ({
     this.selectedParentUnit = parent
   },
 
-  // ── 기구유형별 ────────────────────────────────────────────
-  async selectType(type) {
-    this.selectedType = type
-    this.navigate('/types/' + type)
+  // ── 지자체 비교 ───────────────────────────────────────────
+  toggleCompare(gwCode) {
+    this.compareExpanded = { ...this.compareExpanded, [gwCode]: !this.compareExpanded[gwCode] }
+  },
+
+  gwTypeTotal(typeMap) {
+    return Object.values(typeMap || {}).reduce((a, b) => a + b, 0)
+  },
+
+  // ── 키워드 검색 ───────────────────────────────────────────
+  async runKwSearch() {
+    const q = this.kwSearch.trim()
+    if (!q) { this.kwResultMap = {}; this.kwSearchDone = false; return }
+
     await this._ensureSearchDocs()
+    const queryGroups = this._parseKwQuery(q)
+    if (!queryGroups.length) return
+
+    const regionDocs = {}
+    for (const doc of this.searchDocs) {
+      const rc = doc.region_code
+      if (!regionDocs[rc]) regionDocs[rc] = { parents: [], childrenByParent: {} }
+      if (doc.parent_name) {
+        if (!regionDocs[rc].childrenByParent[doc.parent_name])
+          regionDocs[rc].childrenByParent[doc.parent_name] = []
+        regionDocs[rc].childrenByParent[doc.parent_name].push(doc)
+      } else {
+        regionDocs[rc].parents.push(doc)
+      }
+    }
+
+    const resultMap = {}
+    for (const r of this.index) {
+      const rd = regionDocs[r.code]
+      if (!rd) { resultMap[r.code] = []; continue }
+      const groups = []
+      const seenParents = new Set()
+
+      for (const doc of rd.parents) {
+        const text = doc.unit_name + ' ' + (doc.분장사무_summary || '')
+        const parentHit = this._matchesKwQuery(text, queryGroups)
+        const children = rd.childrenByParent[doc.unit_name] || []
+        const hitSet = new Set(
+          children.filter(c => this._matchesKwQuery(c.unit_name + ' ' + (c.분장사무_summary || ''), queryGroups))
+            .map(c => c.unit_name)
+        )
+        if (parentHit || hitSet.size) {
+          groups.push({
+            parentName: doc.unit_name,
+            parentType: doc.unit_type,
+            parentHit,
+            children: children.map(c => ({ name: c.unit_name, type: c.unit_type, hit: hitSet.has(c.unit_name) })),
+          })
+          seenParents.add(doc.unit_name)
+        }
+      }
+
+      // 부모가 없는 고아 child hits
+      for (const [pName, children] of Object.entries(rd.childrenByParent)) {
+        if (seenParents.has(pName)) continue
+        const hitSet = new Set(
+          children.filter(c => this._matchesKwQuery(c.unit_name + ' ' + (c.분장사무_summary || ''), queryGroups))
+            .map(c => c.unit_name)
+        )
+        if (hitSet.size) {
+          groups.push({
+            parentName: pName, parentType: '', parentHit: false,
+            children: children.map(c => ({ name: c.unit_name, type: c.unit_type, hit: hitSet.has(c.unit_name) })),
+          })
+        }
+      }
+
+      resultMap[r.code] = groups
+    }
+
+    this.kwResultMap = resultMap
+    this.kwSearchDone = true
+  },
+
+  _parseKwQuery(q) {
+    return q.split(/\bOR\b/i).map(part => {
+      const tokens = part.trim().split(/\s+/).filter(Boolean)
+      const must = [], mustNot = []
+      for (let i = 0; i < tokens.length; i++) {
+        if (/^AND$/i.test(tokens[i])) continue
+        if (/^NOT$/i.test(tokens[i])) {
+          if (i + 1 < tokens.length) mustNot.push(tokens[++i].toLowerCase())
+          continue
+        }
+        must.push(tokens[i].toLowerCase())
+      }
+      return { must, mustNot }
+    }).filter(g => g.must.length)
+  },
+
+  _matchesKwQuery(text, groups) {
+    const t = text.toLowerCase()
+    return groups.some(g => {
+      if (g.mustNot.some(term => t.includes(term))) return false
+      return g.must.every(term => t.includes(term))
+    })
   },
 
   async _ensureSearchDocs() {
@@ -197,12 +254,10 @@ Alpine.data('mainApp', () => ({
     }
   },
 
-  // ── 검색 ─────────────────────────────────────────────────
+  // ── 헤더 검색 ─────────────────────────────────────────────
   async onSearch() {
     const q = this.searchQuery.trim()
     if (!q) { this.searchResults = []; return }
-
-    // 검색 인덱스 lazy 초기화
     if (!this.miniSearch) {
       this.loading = true
       try {
@@ -219,7 +274,6 @@ Alpine.data('mainApp', () => ({
         this.loading = false
       }
     }
-
     this.searchResults = this.miniSearch.search(q).slice(0, 20)
     this.searchOpen = true
   },
@@ -229,13 +283,6 @@ Alpine.data('mainApp', () => ({
     this.searchQuery = ''
     this.searchResults = []
     this.navigate('/region/' + r.region_code)
-  },
-
-  // ── 유틸 ─────────────────────────────────────────────────
-  getGwangyeokName(regionCode) {
-    const r = this.indexMap[regionCode]
-    if (!r) return ''
-    return r.level === '광역' ? r.name : r.parent_name
   },
 }))
 

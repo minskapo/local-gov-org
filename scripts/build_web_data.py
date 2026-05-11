@@ -45,12 +45,19 @@ def build_index(records, code_to_name):
         structure = d.get("structure", [])
         children_total = sum(len(u.get("children", [])) for u in structure)
         kw_dist: dict[str, int] = {}
+        type_dist: dict[str, int] = {}
         for u in structure:
             for kw in u.get("키워드_태그", []):
                 kw_dist[kw] = kw_dist.get(kw, 0) + 1
+            ut = u.get("type", "")
+            if ut:
+                type_dist[ut] = type_dist.get(ut, 0) + 1
             for c in u.get("children", []):
                 for kw in c.get("키워드_태그", []):
                     kw_dist[kw] = kw_dist.get(kw, 0) + 1
+                ct = c.get("type", "")
+                if ct:
+                    type_dist[ct] = type_dist.get(ct, 0) + 1
         items.append({
             "code": code,
             "name": reg["name"],
@@ -63,6 +70,7 @@ def build_index(records, code_to_name):
             "하위기구수": children_total,
             "정원": d.get("totals", {}).get("정원_총") or 0,
             "키워드_분포": kw_dist,
+            "기구유형별": type_dist,
         })
     return items
 
