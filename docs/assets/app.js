@@ -3,19 +3,14 @@ import MiniSearch from 'https://esm.sh/minisearch@7.1.1'
 import { loadIndex, loadAggregates, loadRegion, loadSearchDocs } from './api.js'
 
 const KW_ORDER = ['기후','환경','에너지','녹지_생태','교통','복지','재난_안전','도시_건축','경제_산업','행정_기획','문화_교육','보건_위생']
-const TYPE_ORDER = [
-  '국','실','본부','단','관','처',
-  '보좌기관','담당관','한시기구',
-  '직속기관','사업소','출장소',
-  '과',
-]
+const TYPE_ORDER = ['국','실','본부','단','관','처','보좌기관','담당관','한시기구','직속기관','사업소','출장소','과']
 
 function parseHash(hash) {
   const h = (hash || location.hash).replace(/^#/, '') || '/'
-  if (h === '/' || h === '')         return { view: 'overview', code: '' }
-  if (h.startsWith('/region/'))      return { view: 'region',   code: h.slice(8) }
-  if (h === '/compare')              return { view: 'compare',  code: '' }
-  if (h.startsWith('/kwsearch'))     return { view: 'kwsearch', code: '' }
+  if (h === '/' || h === '')     return { view: 'overview', code: '' }
+  if (h.startsWith('/region/')) return { view: 'region',   code: h.slice(8) }
+  if (h === '/compare')          return { view: 'compare',  code: '' }
+  if (h.startsWith('/kwsearch')) return { view: 'kwsearch', code: '' }
   return { view: 'overview', code: '' }
 }
 
@@ -39,13 +34,12 @@ Alpine.data('mainApp', () => ({
   compareExpanded: {},
 
   // ── 키워드 검색 ───────────────────────────────────────────
-  kwSearch: '',
-  kwResultMap: {},
+  // 각 조건: { type: 'include'|'exclude'|'or', text: '' }
+  kwConditions: [{ type: 'include', text: '' }],
+  kwTypeVisible: [...TYPE_ORDER],  // 표시할 기구 유형 목록
+  kwResultMap: {},   // { regionCode: [ group, ... ] }
   kwSearchDone: false,
   searchDocs: null,
-
-  // ── UI 상태 ──────────────────────────────────────────────
-  infoOpen: false,
 
   // ── 헤더 검색 ────────────────────────────────────────────
   searchQuery: '',
@@ -86,13 +80,47 @@ Alpine.data('mainApp', () => ({
     const code = this.selectedRegion.region.code
     return this.index.filter(r => r.parent === code)
   },
+
+  // 비교 테이블용 평탄 행 목록 (x-if 중첩 없이 tbody에서 사용)
+  get compareRows() {
+    const rows = []
+    for (const gw of (this.aggregates?.광역 || [])) {
+      rows.push({ kind: 'gw', data: gw })
+      if (this.compareExpanded[gw.code]) {
+        for (const r of (this.gicheoByParent[gw.code] || [])) {
+          rows.push({ kind: 'gi', data: r, gwCode: gw.code })
+        }
+      }
+    }
+    return rows
+  },
+
+  // 타입 필터 적용된 검색 결과
+  get kwFilteredResultMap() {
+    if (!this.kwSearchDone) return {}
+    const visible = this.kwTypeVisible
+    const out = {}
+    for (const [code, groups] of Object.entries(this.kwResultMap)) {
+      out[code] = groups.map(g => {
+        const parentVisible = !g.parentType || visible.includes(g.parentType)
+        const filteredChildren = g.children.filter(c => !c.type || visible.includes(c.type))
+        if (!parentVisible && !filteredChildren.some(c => c.hit)) return null
+        if (parentVisible && !g.parentHit && !filteredChildren.some(c => c.hit)) return null
+        return { ...g, parentVisible, children: filteredChildren }
+      }).filter(Boolean)
+    }
+    return out
+  },
+
+  // kwsearch 뷰 표시용 평탄 행 목록
   get kwSearchRows() {
     if (!this.kwSearchDone) return []
+    const rm = this.kwFilteredResultMap
     const rows = []
     for (const gw of this.gwangyeok) {
-      rows.push({ kind: 'gw', region: gw, groups: this.kwResultMap[gw.code] || [] })
+      rows.push({ kind: 'gw', region: gw, groups: rm[gw.code] || [] })
       for (const r of (this.gicheoByParent[gw.code] || [])) {
-        rows.push({ kind: 'gi', region: r, groups: this.kwResultMap[r.code] || [] })
+        rows.push({ kind: 'gi', region: r, groups: rm[r.code] || [] })
       }
     }
     return rows
@@ -113,9 +141,7 @@ Alpine.data('mainApp', () => ({
     apply()
   },
 
-  navigate(path) {
-    location.hash = '#' + path
-  },
+  navigate(path) { location.hash = '#' + path },
 
   async _applyRoute({ view, code }) {
     this.loading = false
@@ -146,22 +172,42 @@ Alpine.data('mainApp', () => ({
 
   // ── 지자체 비교 ───────────────────────────────────────────
   toggleCompare(gwCode) {
-    this.compareExpanded = { ...this.compareExpanded, [gwCode]: !this.compareExpanded[gwCode] }
+    this.compareExpanded = {
+      ...this.compareExpanded,
+      [gwCode]: !this.compareExpanded[gwCode],
+    }
   },
 
   gwTypeTotal(typeMap) {
     return Object.values(typeMap || {}).reduce((a, b) => a + b, 0)
   },
 
-  // ── 키워드 검색 ───────────────────────────────────────────
+  // ── 키워드 검색 조건 관리 ─────────────────────────────────
+  addKwCondition() {
+    this.kwConditions = [...this.kwConditions, { type: 'include', text: '' }]
+  },
+  removeKwCondition(i) {
+    this.kwConditions = this.kwConditions.filter((_, idx) => idx !== i)
+    if (!this.kwConditions.length) this.kwConditions = [{ type: 'include', text: '' }]
+  },
+
+  // ── 기구 유형 표시 토글 ───────────────────────────────────
+  toggleKwType(t) {
+    if (this.kwTypeVisible.includes(t)) {
+      this.kwTypeVisible = this.kwTypeVisible.filter(x => x !== t)
+    } else {
+      this.kwTypeVisible = [...this.kwTypeVisible, t]
+    }
+  },
+
+  // ── 키워드 검색 실행 ──────────────────────────────────────
   async runKwSearch() {
-    const q = this.kwSearch.trim()
-    if (!q) { this.kwResultMap = {}; this.kwSearchDone = false; return }
+    const conditions = this.kwConditions.filter(c => c.text.trim())
+    if (!conditions.length) return
 
     await this._ensureSearchDocs()
-    const queryGroups = this._parseKwQuery(q)
-    if (!queryGroups.length) return
 
+    // searchDocs를 region 기준으로 인덱싱
     const regionDocs = {}
     for (const doc of this.searchDocs) {
       const rc = doc.region_code
@@ -179,15 +225,17 @@ Alpine.data('mainApp', () => ({
     for (const r of this.index) {
       const rd = regionDocs[r.code]
       if (!rd) { resultMap[r.code] = []; continue }
+
       const groups = []
       const seenParents = new Set()
 
       for (const doc of rd.parents) {
         const text = doc.unit_name + ' ' + (doc.분장사무_summary || '')
-        const parentHit = this._matchesKwQuery(text, queryGroups)
+        const parentHit = this._matchesCond(text, conditions)
         const children = rd.childrenByParent[doc.unit_name] || []
         const hitSet = new Set(
-          children.filter(c => this._matchesKwQuery(c.unit_name + ' ' + (c.분장사무_summary || ''), queryGroups))
+          children
+            .filter(c => this._matchesCond(c.unit_name + ' ' + (c.분장사무_summary || ''), conditions))
             .map(c => c.unit_name)
         )
         if (parentHit || hitSet.size) {
@@ -195,23 +243,38 @@ Alpine.data('mainApp', () => ({
             parentName: doc.unit_name,
             parentType: doc.unit_type,
             parentHit,
-            children: children.map(c => ({ name: c.unit_name, type: c.unit_type, hit: hitSet.has(c.unit_name) })),
+            parentSummary: doc.분장사무_summary || '',
+            children: children.map(c => ({
+              name: c.unit_name,
+              type: c.unit_type,
+              hit: hitSet.has(c.unit_name),
+              summary: c.분장사무_summary || '',
+            })),
           })
           seenParents.add(doc.unit_name)
         }
       }
 
-      // 부모가 없는 고아 child hits
+      // parent가 없는 child 히트
       for (const [pName, children] of Object.entries(rd.childrenByParent)) {
         if (seenParents.has(pName)) continue
         const hitSet = new Set(
-          children.filter(c => this._matchesKwQuery(c.unit_name + ' ' + (c.분장사무_summary || ''), queryGroups))
+          children
+            .filter(c => this._matchesCond(c.unit_name + ' ' + (c.분장사무_summary || ''), conditions))
             .map(c => c.unit_name)
         )
         if (hitSet.size) {
           groups.push({
-            parentName: pName, parentType: '', parentHit: false,
-            children: children.map(c => ({ name: c.unit_name, type: c.unit_type, hit: hitSet.has(c.unit_name) })),
+            parentName: pName,
+            parentType: '',
+            parentHit: false,
+            parentSummary: '',
+            children: children.map(c => ({
+              name: c.unit_name,
+              type: c.unit_type,
+              hit: hitSet.has(c.unit_name),
+              summary: c.분장사무_summary || '',
+            })),
           })
         }
       }
@@ -223,28 +286,17 @@ Alpine.data('mainApp', () => ({
     this.kwSearchDone = true
   },
 
-  _parseKwQuery(q) {
-    return q.split(/\bOR\b/i).map(part => {
-      const tokens = part.trim().split(/\s+/).filter(Boolean)
-      const must = [], mustNot = []
-      for (let i = 0; i < tokens.length; i++) {
-        if (/^AND$/i.test(tokens[i])) continue
-        if (/^NOT$/i.test(tokens[i])) {
-          if (i + 1 < tokens.length) mustNot.push(tokens[++i].toLowerCase())
-          continue
-        }
-        must.push(tokens[i].toLowerCase())
-      }
-      return { must, mustNot }
-    }).filter(g => g.must.length)
-  },
-
-  _matchesKwQuery(text, groups) {
+  // 조건 배열로 텍스트 매칭 — include/exclude/or 모델
+  _matchesCond(text, conditions) {
     const t = text.toLowerCase()
-    return groups.some(g => {
-      if (g.mustNot.some(term => t.includes(term))) return false
-      return g.must.every(term => t.includes(term))
-    })
+    const include = conditions.filter(c => c.type === 'include' && c.text.trim())
+    const exclude = conditions.filter(c => c.type === 'exclude' && c.text.trim())
+    const or     = conditions.filter(c => c.type === 'or'      && c.text.trim())
+    if (!include.length && !or.length) return false
+    if (exclude.some(c => t.includes(c.text.trim().toLowerCase()))) return false
+    if (!include.every(c => t.includes(c.text.trim().toLowerCase()))) return false
+    if (or.length && !or.some(c => t.includes(c.text.trim().toLowerCase()))) return false
+    return true
   },
 
   async _ensureSearchDocs() {
