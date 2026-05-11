@@ -349,6 +349,24 @@
         </template>
       </div>
 
+      <!-- 검색 결과 통계 -->
+      <template x-if="kwSearchDone && kwSearchStats">
+        <div class="kws-stats-bar">
+          <span class="kws-stat-total">검색 결과 <strong x-text="kwSearchStats.total.toLocaleString()"></strong>건</span>
+          <span class="kws-stat-sep">—</span>
+          <span>광역 <strong x-text="kwSearchStats.byLevel.광역"></strong>·기초 <strong x-text="kwSearchStats.byLevel.기초"></strong></span>
+          <template x-if="kwSearchStats.typeList.length">
+            <span class="kws-stat-sep">|</span>
+          </template>
+          <template x-for="item in kwSearchStats.typeList" :key="item.type">
+            <span class="kws-stat-item">
+              <span class="type-badge sm" :class="'badge-'+item.type" x-text="item.type"></span>
+              <strong x-text="item.count"></strong>
+            </span>
+          </template>
+        </div>
+      </template>
+
       <!-- 검색 전 안내 -->
       <template x-if="!kwSearchDone">
         <div class="kwsearch-placeholder">

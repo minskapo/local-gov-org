@@ -364,6 +364,19 @@ button { cursor: pointer; font: inherit; }
 }
 .kws-type-chip.active { opacity: 1; border-color: currentColor; }
 
+/* 검색 결과 통계 바 */
+.kws-stats-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem;
+  padding: .5rem .85rem; margin-bottom: .5rem;
+  background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: var(--radius);
+  font-size: .82rem; color: var(--clr-text);
+}
+.kws-stat-total { white-space: nowrap; }
+.kws-stat-total strong { font-size: 1rem; color: var(--clr-primary); }
+.kws-stat-sep { color: var(--clr-border); user-select: none; }
+.kws-stat-item { display: inline-flex; align-items: center; gap: .25rem; white-space: nowrap; }
+.kws-stat-item strong { font-size: .88rem; }
+
 /* 검색 전 안내 */
 .kwsearch-placeholder {
   padding: 3rem; text-align: center; color: var(--clr-muted); line-height: 2.2;

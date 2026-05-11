@@ -123,6 +123,34 @@ Alpine.data('mainApp', () => ({
     return out
   },
 
+  // 키워드 검색 결과 통계
+  get kwSearchStats() {
+    if (!this.kwSearchDone) return null
+    const rm = this.kwFilteredResultMap
+    let total = 0
+    const byLevel = { 광역: 0, 기초: 0 }
+    const byType = {}
+    for (const [code, groups] of Object.entries(rm)) {
+      const level = (this.indexMap[code] || {}).level || ''
+      for (const g of groups) {
+        if (g.parentHit) {
+          total++
+          if (level in byLevel) byLevel[level]++
+          byType[g.parentType] = (byType[g.parentType] || 0) + 1
+        }
+        for (const c of g.children) {
+          if (c.hit) {
+            total++
+            if (level in byLevel) byLevel[level]++
+            byType[c.type] = (byType[c.type] || 0) + 1
+          }
+        }
+      }
+    }
+    const typeList = TYPE_ORDER.filter(t => byType[t]).map(t => ({ type: t, count: byType[t] }))
+    return { total, byLevel, typeList }
+  },
+
   // ── 전체 기구 현황 computed ───────────────────────────────
   get unitsGwOptions() {
     return this.gwangyeok.map(r => r.name)
