@@ -47,7 +47,7 @@ Alpine.data('mainApp', () => ({
   unitsFilter: { gw: '', gi: '', type: '', name: '' },
   unitsSortCol: '',
   unitsSortDir: 1,
-  unitsPage: 0,
+  unitsDisplayCount: 500,
   unitDetail: null,
 
   // ── 헤더 검색 ────────────────────────────────────────────
@@ -182,8 +182,7 @@ Alpine.data('mainApp', () => ({
     return Array.from({ length: this.unitsMaxChildren }, (_, i) => i)
   },
   get unitsDisplayRows() {
-    const MAX = 500
-    const rows = this.unitsFiltered.slice(0, MAX)
+    const rows = this.unitsFiltered.slice(0, this.unitsDisplayCount)
     let lastCode = null
     return rows.map(row => {
       const showRegion = row.code !== lastCode
@@ -192,7 +191,10 @@ Alpine.data('mainApp', () => ({
     })
   },
   get unitsTruncated() {
-    return this.unitsFiltered.length > 500
+    return this.unitsFiltered.length > this.unitsDisplayCount
+  },
+  get unitsRemaining() {
+    return Math.max(0, this.unitsFiltered.length - this.unitsDisplayCount)
   },
 
   // kwsearch 뷰 표시용 평탄 행 목록
@@ -282,6 +284,7 @@ Alpine.data('mainApp', () => ({
     }
     this.unitsRows = rows
   },
+  loadMoreUnits() { this.unitsDisplayCount += 500 },
   showUnitDetail(unit) { if (unit) this.unitDetail = unit },
   sortUnits(col) {
     if (this.unitsSortCol === col) this.unitsSortDir *= -1

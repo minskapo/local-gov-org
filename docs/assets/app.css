@@ -494,11 +494,15 @@ button { cursor: pointer; font: inherit; }
 .units-gi-cell { color: var(--clr-muted); }
 .units-child-cell { min-width: 100px; }
 
-.units-truncate-msg {
-  margin-top: .75rem; padding: .6rem .85rem;
-  background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--radius);
-  font-size: .82rem; color: #92400E;
+.units-loadmore {
+  display: flex; justify-content: center; padding: 1rem 0;
 }
+.units-loadmore-btn {
+  padding: .55rem 1.5rem; border: 2px solid var(--clr-primary);
+  border-radius: 20px; background: #fff; color: var(--clr-primary);
+  font-size: .85rem; font-weight: 600; cursor: pointer; transition: background .15s;
+}
+.units-loadmore-btn:hover { background: var(--clr-primary); color: #fff; }
 
 /* 클릭 가능한 기구명 */
 .unit-link { cursor: default; }
