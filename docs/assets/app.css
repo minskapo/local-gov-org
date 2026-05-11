@@ -383,6 +383,7 @@ button { cursor: pointer; font: inherit; }
 /* 지역 행 */
 .kws-region-row {
   display: flex; gap: 0; border-bottom: 1px solid #F1F5F9; min-height: 36px;
+  overflow: hidden;
 }
 .kws-region-row:hover { background: #F8FAFC; }
 .kws-region-name {
@@ -392,13 +393,13 @@ button { cursor: pointer; font: inherit; }
   display: flex; align-items: flex-start; padding-top: .55rem;
 }
 .kws-region-name:hover { text-decoration: underline; }
-.kws-region-body { flex: 1; padding: .4rem .6rem; display: flex; flex-direction: column; gap: .4rem; }
+.kws-region-body { flex: 1; min-width: 0; padding: .4rem .6rem; display: flex; flex-direction: column; gap: .4rem; }
 .kws-empty { font-size: .78rem; color: #CBD5E1; align-self: center; }
 
 /* 매칭 그룹 */
 .kws-match-group {
   border: 1px solid var(--clr-border); border-radius: 6px;
-  padding: .35rem .5rem; background: #fff;
+  padding: .35rem .5rem; background: #fff; min-width: 0; overflow: hidden;
 }
 .kws-parent-row {
   display: flex; align-items: center; gap: .35rem; margin-bottom: .3rem;
@@ -465,7 +466,7 @@ button { cursor: pointer; font: inherit; }
 .page-btn:disabled { opacity: .4; cursor: default; }
 .page-info { color: var(--clr-muted); }
 
-.units-table-wrap { overflow-x: auto; max-height: calc(100vh - 220px); overflow-y: auto; }
+.units-table-wrap { overflow-x: auto; }
 .units-table { min-width: max-content; }
 .units-table thead th {
   position: sticky; top: 0; z-index: 2;
@@ -519,7 +520,10 @@ button { cursor: pointer; font: inherit; }
 }
 .unit-detail-close:hover { background: #FEE2E2; color: #DC2626; }
 .unit-detail-body { padding: .9rem 1rem; overflow-y: auto; flex: 1; }
-.unit-detail-summary { font-size: .85rem; line-height: 1.7; color: var(--clr-text); white-space: pre-wrap; }
+.unit-detail-list {
+  margin: 0; padding-left: 1.3rem; display: flex; flex-direction: column; gap: .45rem;
+}
+.unit-detail-list li { font-size: .85rem; line-height: 1.65; color: var(--clr-text); }
 .unit-detail-empty { font-size: .85rem; color: var(--clr-muted); line-height: 1.7; }
 .unit-detail-empty small { font-size: .78rem; }
 

@@ -83,7 +83,7 @@ def build_by_keyword(records, keywords):
         rn = reg["name"]
         for u in d.get("structure", []):
             u_name = u.get("name", "")
-            summary = " ".join((u.get("분장사무_항목") or [])[:5])
+            summary = "\n".join((u.get("분장사무_항목") or [])[:5])
             for kw in u.get("키워드_태그", []):
                 if kw in kw_data:
                     kw_data[kw].append({
@@ -95,7 +95,7 @@ def build_by_keyword(records, keywords):
                         "분장사무_summary": summary,
                     })
             for c in u.get("children", []):
-                c_summary = " ".join((c.get("분장사무_항목") or [])[:5])
+                c_summary = "\n".join((c.get("분장사무_항목") or [])[:5])
                 for kw in c.get("키워드_태그", []):
                     if kw in kw_data:
                         kw_data[kw].append({
@@ -161,7 +161,7 @@ def build_search_docs(records):
         rn = reg["name"]
         rl = reg.get("level", "")
         for u in d.get("structure", []):
-            summary = " ".join((u.get("분장사무_항목") or [])[:5])
+            summary = "\n".join((u.get("분장사무_항목") or [])[:5])
             docs.append({
                 "id": f"{rc}#{u.get('id', u.get('name', ''))}",
                 "region_code": rc,
@@ -174,7 +174,7 @@ def build_search_docs(records):
                 "분장사무_summary": summary,
             })
             for c in u.get("children", []):
-                c_summary = " ".join((c.get("분장사무_항목") or [])[:5])
+                c_summary = "\n".join((c.get("분장사무_항목") or [])[:5])
                 docs.append({
                     "id": f"{rc}#{c.get('id', c.get('name', ''))}",
                     "region_code": rc,

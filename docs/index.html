@@ -449,16 +449,7 @@
 
       <!-- 테이블 -->
       <template x-if="unitsRows.length">
-        <div>
-          <!-- 페이지네이션 (상단) -->
-          <div class="units-pagination" x-show="unitsTotalPages > 1">
-            <button class="page-btn" @click="prevUnitsPage()" :disabled="unitsPage===0">← 이전</button>
-            <span class="page-info"
-              x-text="(unitsPage+1)+' / '+unitsTotalPages+' 페이지 (총 '+unitsFiltered.length.toLocaleString()+'행)'"></span>
-            <button class="page-btn" @click="nextUnitsPage()" :disabled="unitsPage>=unitsTotalPages-1">다음 →</button>
-          </div>
-
-          <div class="units-table-wrap">
+        <div class="units-table-wrap">
             <table class="data-table units-table">
               <thead>
                 <tr>
@@ -483,7 +474,7 @@
                 </tr>
               </thead>
               <tbody>
-                <template x-for="row in unitsPageRows" :key="row.code+'#'+row.parentName">
+                <template x-for="row in unitsFiltered" :key="row.code+'#'+row.parentName">
                   <tr :class="{
                     'urow-보좌기관': row.parentType==='보좌기관',
                     'urow-직속기관': row.parentType==='직속기관',
@@ -513,15 +504,6 @@
               </tbody>
             </table>
           </div>
-
-          <!-- 페이지네이션 (하단) -->
-          <div class="units-pagination" x-show="unitsTotalPages > 1">
-            <button class="page-btn" @click="prevUnitsPage()" :disabled="unitsPage===0">← 이전</button>
-            <span class="page-info"
-              x-text="(unitsPage+1)+' / '+unitsTotalPages+' 페이지'"></span>
-            <button class="page-btn" @click="nextUnitsPage()" :disabled="unitsPage>=unitsTotalPages-1">다음 →</button>
-          </div>
-        </div>
       </template>
     </div><!-- /units -->
 
@@ -539,7 +521,11 @@
           </div>
           <div class="unit-detail-body">
             <template x-if="unitDetail.summary">
-              <p class="unit-detail-summary" x-text="unitDetail.summary"></p>
+              <ul class="unit-detail-list">
+                <template x-for="(item, i) in unitDetail.summary.split('\n').filter(s => s.trim())" :key="i">
+                  <li x-text="item.trim()"></li>
+                </template>
+              </ul>
             </template>
             <template x-if="!unitDetail.summary">
               <p class="unit-detail-empty">소관업무 정보가 없습니다.<br><small>조례 별표 형식으로 수록된 경우 파싱되지 않았습니다.</small></p>
