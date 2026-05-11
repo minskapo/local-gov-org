@@ -132,6 +132,7 @@ Alpine.data('mainApp', () => ({
   },
 
   async _applyRoute({ view, code, keyword, type }) {
+    this.loading = false
     this.view = view
     this.currentCode = code
     this.currentKeyword = keyword
