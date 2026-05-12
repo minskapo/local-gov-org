@@ -1,6 +1,6 @@
 import Alpine from 'https://esm.sh/alpinejs@3.14.7'
 import MiniSearch from 'https://esm.sh/minisearch@7.1.1'
-import { loadIndex, loadAggregates, loadRegion, loadSearchDocs } from './api.js'
+import { loadIndex, loadAggregates, loadRegion, loadSearchDocs, loadClimateDepts } from './api.js'
 
 const KW_ORDER = ['기후','환경','에너지','녹지_생태','교통','복지','재난_안전','도시_건축','경제_산업','행정_기획','문화_교육','보건_위생']
 const TYPE_ORDER = ['국','실','본부','단','관','처','보좌기관','담당관','한시기구','직속기관','사업소','출장소','과']
@@ -12,6 +12,7 @@ function parseHash(hash) {
   if (h === '/compare')          return { view: 'compare',  code: '' }
   if (h.startsWith('/kwsearch')) return { view: 'kwsearch', code: '' }
   if (h.startsWith('/units'))    return { view: 'units',    code: '' }
+  if (h.startsWith('/climate'))  return { view: 'climate',  code: '' }
   return { view: 'overview', code: '' }
 }
 
@@ -48,7 +49,14 @@ Alpine.data('mainApp', () => ({
   unitsSortCol: '',
   unitsSortDir: 1,
   unitsDisplayCount: 500,
+  unitsDisplayRows: [],
+  unitsTruncated: false,
+  unitsRemaining: 0,
   unitDetail: null,
+
+  // ── 기후환경 부서 현황 ────────────────────────────────────
+  climateDepts: null,
+  climateFilter: { gw: '', level: '', type: '' },
 
   // ── 헤더 검색 ────────────────────────────────────────────
   searchQuery: '',
@@ -181,20 +189,33 @@ Alpine.data('mainApp', () => ({
   get unitsChildIndices() {
     return Array.from({ length: this.unitsMaxChildren }, (_, i) => i)
   },
-  get unitsDisplayRows() {
-    const rows = this.unitsFiltered.slice(0, this.unitsDisplayCount)
-    let lastCode = null
-    return rows.map(row => {
-      const showRegion = row.code !== lastCode
-      lastCode = row.code
-      return { ...row, showRegion }
+
+  // ── 기후환경 부서 현황 computed ───────────────────────────
+  get climateGwOptions() {
+    const seen = new Set()
+    return (this.climateDepts || []).filter(r => !seen.has(r.gw) && seen.add(r.gw)).map(r => r.gw)
+  },
+  get climateFiltered() {
+    let rows = this.climateDepts || []
+    const { gw, level, type } = this.climateFilter
+    if (gw)    rows = rows.filter(r => r.gw === gw)
+    if (level) rows = rows.filter(r => r.level === level)
+    if (type)  rows = rows.filter(r => r.parent_type === type)
+    return rows
+  },
+  get climateDisplayRows() {
+    let lastGw = null
+    return this.climateFiltered.map(r => {
+      const showGw = r.gw !== lastGw
+      lastGw = r.gw
+      return { ...r, showGw }
     })
   },
-  get unitsTruncated() {
-    return this.unitsFiltered.length > this.unitsDisplayCount
-  },
-  get unitsRemaining() {
-    return Math.max(0, this.unitsFiltered.length - this.unitsDisplayCount)
+  get climateStats() {
+    const rows = this.climateFiltered
+    const standalone = rows.filter(r => r.parent_type === '기후환경 단독').length
+    const carbon = rows.filter(r => r.dept_keywords.includes('탄소') || r.parent_org.includes('탄소')).length
+    return { total: rows.length, standalone, carbon }
   },
 
   // kwsearch 뷰 표시용 평탄 행 목록
@@ -236,6 +257,10 @@ Alpine.data('mainApp', () => ({
     if (view === 'units') {
       await this._ensureSearchDocs()
       this._buildUnitsRows()
+    }
+
+    if (view === 'climate') {
+      await this._ensureClimateDepts()
     }
 
     if (view === 'region' && code) {
@@ -284,12 +309,27 @@ Alpine.data('mainApp', () => ({
       })
     }
     this.unitsRows = rows
+    this._syncUnitsDisplay()
   },
-  loadMoreUnits() { this.unitsDisplayCount += 500 },
+  _syncUnitsDisplay() {
+    const all = this.unitsFiltered
+    const count = this.unitsDisplayCount
+    this.unitsTruncated = all.length > count
+    this.unitsRemaining = Math.max(0, all.length - count)
+    let lastCode = null
+    this.unitsDisplayRows = all.slice(0, count).map(row => {
+      const showRegion = row.code !== lastCode
+      lastCode = row.code
+      return { ...row, showRegion }
+    })
+  },
+  applyUnitsFilter() { this.unitsDisplayCount = 500; this._syncUnitsDisplay() },
+  loadMoreUnits() { this.unitsDisplayCount += 500; this._syncUnitsDisplay() },
   showUnitDetail(unit) { if (unit) this.unitDetail = unit },
   sortUnits(col) {
     if (this.unitsSortCol === col) this.unitsSortDir *= -1
     else { this.unitsSortCol = col; this.unitsSortDir = 1 }
+    this._syncUnitsDisplay()
   },
   prevUnitsPage() { if (this.unitsPage > 0) this.unitsPage-- },
   nextUnitsPage() { if (this.unitsPage < this.unitsTotalPages - 1) this.unitsPage++ },
@@ -426,6 +466,16 @@ Alpine.data('mainApp', () => ({
     if (!include.every(c => t.includes(c.text.trim().toLowerCase()))) return false
     if (or.length && !or.some(c => t.includes(c.text.trim().toLowerCase()))) return false
     return true
+  },
+
+  async _ensureClimateDepts() {
+    if (this.climateDepts) return
+    this.loading = true
+    try {
+      this.climateDepts = await loadClimateDepts()
+    } finally {
+      this.loading = false
+    }
   },
 
   async _ensureSearchDocs() {

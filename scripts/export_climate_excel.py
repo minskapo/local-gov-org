@@ -16,10 +16,7 @@ BASE_DIR = Path(__file__).parent.parent
 OUT_DIR = BASE_DIR / "data" / "processed" / "by_region"
 EXCEL_PATH = BASE_DIR / "data" / "processed" / "기후환경_행정기구_현황.xlsx"
 
-CLIMATE_KW = frozenset([
-    "기후", "환경", "생태", "녹색", "깨끗", "맑은", "탄소",
-    "대기", "수질", "오염", "재활용", "산림",
-])
+CLIMATE_KW = frozenset(["기후", "환경", "생태", "탄소"])
 
 # 연구원·연구소·연구실 등 일반 행정기관이 아닌 기구 제외
 EXCLUDE_KW = frozenset(["연구원", "연구소", "연구실"])
@@ -159,9 +156,15 @@ def main():
     BG_CHILD_CLIMATE   = "BFDBFE"  # 연파랑: 기후환경 관련 하위기구
     BG_CHILD_OTHER     = "F8FAFC"  # 연회색: 비기후 하위기구
 
+    # 2개 이상 행이 나오는 지자체 코드 사전 파악
+    multi_codes = {
+        d["region"]["code"]
+        for d in records
+        if len(get_climate_rows(d)) > 1
+    }
+
     data_row = 2
     total_rows = 0
-    skipped = 0
 
     for d in records:
         reg = d["region"]
@@ -182,12 +185,26 @@ def main():
 
         climate_rows = get_climate_rows(d)
         if not climate_rows:
-            skipped += 1
+            BG_EMPTY = "F1F5F9"
+            fixed_vals = [code, gwangyeok, gicheo, "", ""]
+            aligns     = ["center", "left", "left", "center", "left"]
+            for col, (val, al) in enumerate(zip(fixed_vals, aligns), 1):
+                apply_cell(ws, data_row, col, val, BG_EMPTY, align=al)
+            data_row += 1
+            total_rows += 1
             continue
 
+        is_multi = code in multi_codes
         for cr in climate_rows:
-            row_bg = BG_PARENT_CLIMATE if cr["climate_parent"] else BG_PARENT_INDIRECT
-            label  = "○"     if cr["climate_parent"] else "△"
+            if is_multi:
+                row_bg      = "FDE68A"  # 연황색: 중복 지자체 행 전체
+                child_bg_kw = "FDE68A"
+                child_bg_ot = "FDE68A"
+            else:
+                row_bg      = BG_PARENT_CLIMATE if cr["climate_parent"] else BG_PARENT_INDIRECT
+                child_bg_kw = BG_CHILD_CLIMATE
+                child_bg_ot = BG_CHILD_OTHER
+            label = "○" if cr["climate_parent"] else "△"
 
             fixed_vals = [code, gwangyeok, gicheo, label, cr["parent"]]
             aligns     = ["center", "left", "left", "center", "left"]
@@ -200,7 +217,7 @@ def main():
 
             for i, (child, child_obj) in enumerate(zip(cr["children"], cr["child_objs"])):
                 col = START + i
-                child_bg = BG_CHILD_CLIMATE if is_climate(child) else BG_CHILD_OTHER
+                child_bg = child_bg_kw if is_climate(child) else child_bg_ot
                 cell = apply_cell(ws, data_row, col, child, child_bg, align="left")
                 cmt = make_comment(child_obj)
                 if cmt:
@@ -216,7 +233,7 @@ def main():
     print(f"저장 중: {EXCEL_PATH}")
     wb.save(EXCEL_PATH)
     size_kb = EXCEL_PATH.stat().st_size / 1024
-    print(f"완료! {total_rows}행 작성 ({skipped}개 지자체 기후환경 기구 없음)")
+    print(f"완료! {total_rows}행 작성")
     print(f"파일 크기: {size_kb:.0f} KB")
     print(f"\n[참고] 사용 키워드: {', '.join(sorted(CLIMATE_KW))}")
 

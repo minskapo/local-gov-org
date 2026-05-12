@@ -25,6 +25,8 @@
          href="#/kwsearch" @click.prevent="navigate('/kwsearch')">키워드 검색</a>
       <a :class="{active: view==='units'}"
          href="#/units" @click.prevent="navigate('/units')">전체 기구 현황</a>
+      <a :class="{active: view==='climate'}"
+         href="#/climate" @click.prevent="navigate('/climate')">기후환경 부서 현황</a>
     </nav>
     <div class="search-wrap" @click.outside="searchOpen=false">
       <input class="search-input" type="search" placeholder="지자체·기구명 검색…"
@@ -442,28 +444,28 @@
       <!-- 필터 -->
       <div class="units-filters">
         <select class="units-filter-sel" x-model="unitsFilter.gw"
-          @change="unitsFilter.gi=''; unitsDisplayCount=500">
+          @change="unitsFilter.gi=''; applyUnitsFilter()">
           <option value="">광역 전체</option>
           <template x-for="opt in unitsGwOptions" :key="opt">
             <option :value="opt" x-text="opt"></option>
           </template>
         </select>
         <select class="units-filter-sel" x-model="unitsFilter.gi"
-          :disabled="!unitsGiOptions.length" @change="unitsDisplayCount=500">
+          :disabled="!unitsGiOptions.length" @change="applyUnitsFilter()">
           <option value="">기초 전체</option>
           <template x-for="opt in unitsGiOptions" :key="opt.code">
             <option :value="opt.code" x-text="opt.label"></option>
           </template>
         </select>
         <select class="units-filter-sel" x-model="unitsFilter.type"
-          @change="unitsDisplayCount=500">
+          @change="applyUnitsFilter()">
           <option value="">기구유형 전체</option>
           <template x-for="t in typeOrder" :key="t">
             <option :value="t" x-text="t"></option>
           </template>
         </select>
         <input class="units-filter-input" type="text" placeholder="상위기구명 검색…"
-          x-model="unitsFilter.name" @input="unitsDisplayCount=500">
+          x-model="unitsFilter.name" @input="applyUnitsFilter()">
         <span class="units-count" x-show="unitsRows.length">
           <strong x-text="unitsFiltered.length.toLocaleString()"></strong>개 기구
         </span>
@@ -544,6 +546,87 @@
         </div>
       </template>
     </div><!-- /units -->
+
+    <!-- ════ 기후환경 부서 현황 ════ -->
+    <div x-show="view==='climate'" class="climate-view">
+      <h2>기후환경 부서 현황</h2>
+
+      <!-- 필터 -->
+      <div class="units-filters">
+        <select class="units-filter-sel" x-model="climateFilter.gw" @change="climateFilter.level=''; climateFilter.type=''">
+          <option value="">광역 전체</option>
+          <template x-for="gw in climateGwOptions" :key="gw">
+            <option :value="gw" x-text="gw"></option>
+          </template>
+        </select>
+        <select class="units-filter-sel" x-model="climateFilter.level">
+          <option value="">광역+기초</option>
+          <option value="광역">광역만</option>
+          <option value="기초">기초만</option>
+        </select>
+        <select class="units-filter-sel" x-model="climateFilter.type">
+          <option value="">상위기구 유형 전체</option>
+          <option value="기후환경 단독">기후환경 단독</option>
+          <option value="타 영역 혼합">타 영역 혼합</option>
+          <option value="타 영역 단독">타 영역 단독</option>
+        </select>
+        <span class="units-count" x-show="climateDepts">
+          <strong x-text="climateFiltered.length.toLocaleString()"></strong>개 지자체
+        </span>
+      </div>
+
+      <!-- 통계 -->
+      <template x-if="climateDepts">
+        <div class="climate-stats">
+          <span class="climate-stat">전체 <strong x-text="climateStats.total"></strong>개</span>
+          <span class="climate-stat climate-stat-green">기후환경 전담 국/실 <strong x-text="climateStats.standalone"></strong>개</span>
+          <span class="climate-stat climate-stat-blue">탄소중립 포함 부서 <strong x-text="climateStats.carbon"></strong>개</span>
+        </div>
+      </template>
+
+      <!-- 로딩 안내 -->
+      <template x-if="!climateDepts && !loading">
+        <div class="empty-state">데이터를 불러오는 중입니다…</div>
+      </template>
+
+      <!-- 테이블 -->
+      <template x-if="climateDepts">
+        <div class="units-table-wrap">
+          <table class="data-table climate-table">
+            <thead>
+              <tr>
+                <th class="col-gw">광역</th>
+                <th class="col-gi">기초</th>
+                <th>상위기구</th>
+                <th class="col-type">유형</th>
+                <th>주무부서</th>
+                <th class="col-kw">부서특성</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="row in climateDisplayRows" :key="row.code">
+                <tr :class="{'urow-region-start': row.showGw, 'climate-row-standalone': row.parent_type==='기후환경 단독'}">
+                  <td class="units-gw-cell"><span x-show="row.showGw" x-text="row.gw"></span></td>
+                  <td class="units-gi-cell" x-text="row.gi"></td>
+                  <td class="climate-parent-cell" x-text="row.parent_org"></td>
+                  <td class="col-type">
+                    <span class="climate-type-badge"
+                          :class="row.parent_type==='기후환경 단독' ? 'cbadge-green' : row.parent_type==='타 영역 혼합' ? 'cbadge-amber' : 'cbadge-gray'"
+                          x-text="row.parent_type==='기후환경 단독' ? '전담' : row.parent_type==='타 영역 혼합' ? '혼합' : '단독'">
+                    </span>
+                  </td>
+                  <td class="climate-dept-cell">
+                    <span :class="{'climate-dept-highlight': row.dept_keywords.includes('탄소') || row.climate_dept.includes('탄소') || row.climate_dept.includes('기후')}"
+                          x-text="row.climate_dept || '-'"></span>
+                  </td>
+                  <td class="col-kw"><span class="climate-kw-tag" x-show="row.dept_keywords" x-text="row.dept_keywords"></span></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </div><!-- /climate -->
 
   </main>
 
