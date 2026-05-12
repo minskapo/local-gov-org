@@ -48,6 +48,7 @@ Alpine.data('mainApp', () => ({
   unitsFilter: { gw: '', gi: '', type: '', name: '' },
   unitsSortCol: '',
   unitsSortDir: 1,
+  _unitsDetailItems: [],
   unitDetail: null,
 
   // ── 기후환경 부서 현황 ────────────────────────────────────
@@ -177,14 +178,6 @@ Alpine.data('mainApp', () => ({
     return [...rows].sort((a, b) => {
       const av = a[col] || '', bv = b[col] || ''
       return av < bv ? -dir : av > bv ? dir : 0
-    })
-  },
-  get unitsDisplayRows() {
-    let lastCode = null
-    return this.unitsFiltered.map(row => {
-      const showRegion = row.code !== lastCode
-      lastCode = row.code
-      return { ...row, showRegion }
     })
   },
   get unitsMaxChildren() {
@@ -322,11 +315,72 @@ Alpine.data('mainApp', () => ({
       })
     }
     this.unitsRows = rows
+    this._renderUnitsTable()
+  },
+  _renderUnitsTable() {
+    const tbody = document.getElementById('units-tbody')
+    if (!tbody) return
+    const rows = this.unitsFiltered
+    const maxCols = this.unitsMaxChildren
+    const di = []
+    const esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const SPECIAL = new Set(['보좌기관', '직속기관', '사업소', '출장소'])
+    let html = ''
+    let lastCode = null
+    for (const row of rows) {
+      const showRegion = row.code !== lastCode
+      lastCode = row.code
+      const cls = [
+        showRegion ? 'urow-region-start' : '',
+        SPECIAL.has(row.parentType) ? `urow-${row.parentType}` : '',
+      ].filter(Boolean).join(' ')
+      let parentCell
+      if (row.parentSummary) {
+        const idx = di.length
+        di.push({ name: row.parentName, type: row.parentType, summary: row.parentSummary })
+        parentCell = `<span class="unit-link has-summary" data-di="${idx}">${esc(row.parentName)}</span>`
+      } else {
+        parentCell = `<span class="unit-link">${esc(row.parentName)}</span>`
+      }
+      let childCells = ''
+      for (let i = 0; i < maxCols; i++) {
+        const c = row.children[i]
+        if (c) {
+          let inner
+          if (c.summary) {
+            const idx = di.length
+            di.push({ name: c.name, type: c.type, summary: c.summary })
+            inner = `<span class="unit-link has-summary" data-di="${idx}">${esc(c.name)}</span>`
+          } else {
+            inner = `<span class="unit-link">${esc(c.name)}</span>`
+          }
+          childCells += `<td class="units-child-cell">${inner}</td>`
+        } else {
+          childCells += `<td class="units-child-cell"></td>`
+        }
+      }
+      html += `<tr class="${cls}">` +
+        `<td class="units-gw-cell">${showRegion ? esc(row.gwName) : ''}</td>` +
+        `<td class="units-gi-cell">${showRegion ? esc(row.giName) : ''}</td>` +
+        `<td><span class="type-badge badge-${esc(row.parentType)}">${esc(row.parentType)}</span></td>` +
+        `<td>${parentCell}</td>` +
+        childCells +
+        `</tr>`
+    }
+    this._unitsDetailItems = di
+    tbody.innerHTML = html
+  },
+  onUnitTableClick(e) {
+    const el = e.target.closest('[data-di]')
+    if (!el) return
+    const item = this._unitsDetailItems[+el.dataset.di]
+    if (item) this.unitDetail = item
   },
   showUnitDetail(unit) { if (unit) this.unitDetail = unit },
   sortUnits(col) {
     if (this.unitsSortCol === col) this.unitsSortDir *= -1
     else { this.unitsSortCol = col; this.unitsSortDir = 1 }
+    this._renderUnitsTable()
   },
 
   // ── 트리 선택 ─────────────────────────────────────────────

@@ -444,98 +444,61 @@
       <!-- 필터 -->
       <div class="units-filters">
         <select class="units-filter-sel" x-model="unitsFilter.gw"
-          @change="unitsFilter.gi=''">
+          @change="unitsFilter.gi=''; _renderUnitsTable()">
           <option value="">광역 전체</option>
           <template x-for="opt in unitsGwOptions" :key="opt">
             <option :value="opt" x-text="opt"></option>
           </template>
         </select>
         <select class="units-filter-sel" x-model="unitsFilter.gi"
-          :disabled="!unitsGiOptions.length">
+          :disabled="!unitsGiOptions.length" @change="_renderUnitsTable()">
           <option value="">기초 전체</option>
           <template x-for="opt in unitsGiOptions" :key="opt.code">
             <option :value="opt.code" x-text="opt.label"></option>
           </template>
         </select>
-        <select class="units-filter-sel" x-model="unitsFilter.type">
+        <select class="units-filter-sel" x-model="unitsFilter.type"
+          @change="_renderUnitsTable()">
           <option value="">기구유형 전체</option>
           <template x-for="t in typeOrder" :key="t">
             <option :value="t" x-text="t"></option>
           </template>
         </select>
         <input class="units-filter-input" type="text" placeholder="상위기구명 검색…"
-          x-model.debounce.300ms="unitsFilter.name">
+          x-model="unitsFilter.name" @input.debounce.300ms="_renderUnitsTable()">
         <span class="units-count" x-show="unitsRows.length">
           <strong x-text="unitsFiltered.length.toLocaleString()"></strong>개 기구
         </span>
       </div>
 
       <!-- 로딩 안내 -->
-      <template x-if="!unitsRows.length && !loading">
-        <div class="empty-state">데이터를 불러오는 중입니다…</div>
-      </template>
+      <div class="empty-state" x-show="!unitsRows.length && !loading">데이터를 불러오는 중입니다…</div>
 
-      <!-- 테이블 -->
-      <template x-if="unitsRows.length">
-        <div>
-        <div class="units-table-wrap">
-            <table class="data-table units-table">
-              <thead>
-                <tr>
-                  <th class="sort-th" @click="sortUnits('gwName')">
-                    광역<span class="sort-ind" x-text="unitsSortCol==='gwName'?(unitsSortDir>0?'▲':'▼'):''"></span>
-                  </th>
-                  <th class="sort-th" @click="sortUnits('giName')">
-                    기초<span class="sort-ind" x-text="unitsSortCol==='giName'?(unitsSortDir>0?'▲':'▼'):''"></span>
-                  </th>
-                  <th class="sort-th" @click="sortUnits('parentType')">
-                    기구유형<span class="sort-ind" x-text="unitsSortCol==='parentType'?(unitsSortDir>0?'▲':'▼'):''"></span>
-                  </th>
-                  <th class="sort-th" @click="sortUnits('parentName')">
-                    상위 행정기구명<span class="sort-ind" x-text="unitsSortCol==='parentName'?(unitsSortDir>0?'▲':'▼'):''"></span>
-                  </th>
-                  <template x-for="i in unitsChildIndices" :key="i">
-                    <th class="units-child-th" x-text="'하위기구'+(i+1)"></th>
-                  </template>
-                </tr>
-              </thead>
-              <tbody>
-                <template x-for="row in unitsDisplayRows" :key="row.code+'#'+row.parentName">
-                  <tr :class="{
-                    'urow-region-start': row.showRegion,
-                    'urow-보좌기관': row.parentType==='보좌기관',
-                    'urow-직속기관': row.parentType==='직속기관',
-                    'urow-사업소':  row.parentType==='사업소',
-                    'urow-출장소':  row.parentType==='출장소',
-                  }">
-                    <td class="units-gw-cell">
-                      <span x-show="row.showRegion" x-text="row.gwName"></span>
-                    </td>
-                    <td class="units-gi-cell">
-                      <span x-show="row.showRegion" x-text="row.giName"></span>
-                    </td>
-                    <td><span class="type-badge" :class="'badge-'+row.parentType" x-text="row.parentType"></span></td>
-                    <td>
-                      <span class="unit-link" :class="{'has-summary': !!row.parentSummary}"
-                        @click="showUnitDetail({name:row.parentName, type:row.parentType, summary:row.parentSummary})"
-                        x-text="row.parentName"></span>
-                    </td>
-                    <template x-for="i in unitsChildIndices" :key="i">
-                      <td class="units-child-cell">
-                        <template x-if="row.children[i]">
-                          <span class="unit-link" :class="{'has-summary': !!row.children[i].summary}"
-                            @click="showUnitDetail(row.children[i])"
-                            x-text="row.children[i].name"></span>
-                        </template>
-                      </td>
-                    </template>
-                  </tr>
-                </template>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </template>
+      <!-- 테이블 (tbody는 innerHTML 직접 주입) -->
+      <div class="units-table-wrap" x-show="unitsRows.length">
+        <table class="data-table units-table">
+          <thead>
+            <tr>
+              <th class="sort-th" @click="sortUnits('gwName')">
+                광역<span class="sort-ind" x-text="unitsSortCol==='gwName'?(unitsSortDir>0?'▲':'▼'):''"></span>
+              </th>
+              <th class="sort-th" @click="sortUnits('giName')">
+                기초<span class="sort-ind" x-text="unitsSortCol==='giName'?(unitsSortDir>0?'▲':'▼'):''"></span>
+              </th>
+              <th class="sort-th" @click="sortUnits('parentType')">
+                기구유형<span class="sort-ind" x-text="unitsSortCol==='parentType'?(unitsSortDir>0?'▲':'▼'):''"></span>
+              </th>
+              <th class="sort-th" @click="sortUnits('parentName')">
+                상위 행정기구명<span class="sort-ind" x-text="unitsSortCol==='parentName'?(unitsSortDir>0?'▲':'▼'):''"></span>
+              </th>
+              <template x-for="i in unitsChildIndices" :key="i">
+                <th class="units-child-th" x-text="'하위기구'+(i+1)"></th>
+              </template>
+            </tr>
+          </thead>
+          <tbody id="units-tbody" @click="onUnitTableClick($event)"></tbody>
+        </table>
+      </div>
     </div><!-- /units -->
 
     <!-- ════ 기후환경 부서 현황 ════ -->
