@@ -213,9 +213,15 @@ Alpine.data('mainApp', () => ({
   },
   get climateStats() {
     const rows = this.climateFiltered
-    const standalone = rows.filter(r => r.parent_type === '기후환경 단독').length
-    const carbon = rows.filter(r => r.dept_keywords.includes('탄소') || r.parent_org.includes('탄소')).length
-    return { total: rows.length, standalone, carbon }
+    const TYPE_ORDER = ['기후환경 단독', '타 영역 혼합', '타 영역 단독']
+    const ptCount = {}, kwCount = {}
+    for (const r of rows) {
+      if (r.parent_type)   ptCount[r.parent_type]   = (ptCount[r.parent_type]   || 0) + 1
+      if (r.dept_keywords) kwCount[r.dept_keywords] = (kwCount[r.dept_keywords] || 0) + 1
+    }
+    const parentTypeList = TYPE_ORDER.filter(t => ptCount[t]).map(t => ({ label: t, count: ptCount[t] }))
+    const deptKwList = Object.entries(kwCount).sort((a, b) => b[1] - a[1]).map(([kw, count]) => ({ kw, count }))
+    return { total: rows.length, parentTypeList, deptKwList }
   },
 
   // kwsearch 뷰 표시용 평탄 행 목록

@@ -577,10 +577,22 @@
 
       <!-- 통계 -->
       <template x-if="climateDepts">
-        <div class="climate-stats">
-          <span class="climate-stat">전체 <strong x-text="climateStats.total"></strong>개</span>
-          <span class="climate-stat climate-stat-green">기후환경 전담 국/실 <strong x-text="climateStats.standalone"></strong>개</span>
-          <span class="climate-stat climate-stat-blue">탄소중립 포함 부서 <strong x-text="climateStats.carbon"></strong>개</span>
+        <div class="climate-stats-wrap">
+          <div class="climate-stats-row">
+            <span class="climate-stat-label">상위기구 유형</span>
+            <template x-for="item in climateStats.parentTypeList" :key="item.label">
+              <span class="climate-type-badge"
+                    :class="item.label==='기후환경 단독' ? 'cbadge-green' : item.label==='타 영역 혼합' ? 'cbadge-amber' : 'cbadge-gray'">
+                <span x-text="item.label"></span> <strong x-text="item.count + '개'"></strong>
+              </span>
+            </template>
+          </div>
+          <div class="climate-stats-row">
+            <span class="climate-stat-label">부서특성</span>
+            <template x-for="item in climateStats.deptKwList" :key="item.kw">
+              <span class="climate-kw-tag"><span x-text="item.kw"></span> <strong x-text="item.count + '개'"></strong></span>
+            </template>
+          </div>
         </div>
       </template>
 
