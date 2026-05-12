@@ -480,9 +480,6 @@
             <table class="data-table units-table">
               <thead>
                 <tr>
-                  <th class="sort-th" @click="sortUnits('code')">
-                    코드<span class="sort-ind" x-text="unitsSortCol==='code'?(unitsSortDir>0?'▲':'▼'):''"></span>
-                  </th>
                   <th class="sort-th" @click="sortUnits('gwName')">
                     광역<span class="sort-ind" x-text="unitsSortCol==='gwName'?(unitsSortDir>0?'▲':'▼'):''"></span>
                   </th>
@@ -509,9 +506,6 @@
                     'urow-사업소':  row.parentType==='사업소',
                     'urow-출장소':  row.parentType==='출장소',
                   }">
-                    <td class="units-code-cell">
-                      <span x-show="row.showRegion" x-text="row.code"></span>
-                    </td>
                     <td class="units-gw-cell">
                       <span x-show="row.showRegion" x-text="row.gwName"></span>
                     </td>

@@ -256,7 +256,8 @@ Alpine.data('mainApp', () => ({
 
   // ── 전체 기구 현황 ────────────────────────────────────────
   _buildUnitsRows() {
-    if (!this.searchDocs || this.unitsRows.length) return
+    if (!this.searchDocs) return
+    if (this.unitsRows.length) return
     const childrenOf = {}
     for (const doc of this.searchDocs) {
       if (doc.parent_name) {
@@ -270,7 +271,7 @@ Alpine.data('mainApp', () => ({
       if (doc.parent_name) continue
       const ri = this.indexMap[doc.region_code] || {}
       const gwName = ri.level === '광역' ? ri.name : (ri.parent_name || '')
-      const giName = ri.level === '기초' ? ri.name : ''
+      const giName = ri.level === '기초' ? (ri.short_name || ri.name) : ''
       const key = doc.region_code + '\x00' + doc.unit_name
       rows.push({
         code: doc.region_code,
