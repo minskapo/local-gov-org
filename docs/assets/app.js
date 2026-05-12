@@ -363,7 +363,7 @@ Alpine.data('mainApp', () => ({
         `<td class="units-gw-cell">${showRegion ? esc(row.gwName) : ''}</td>` +
         `<td class="units-gi-cell">${showRegion ? esc(row.giName) : ''}</td>` +
         `<td><span class="type-badge badge-${esc(row.parentType)}">${esc(row.parentType)}</span></td>` +
-        `<td>${parentCell}</td>` +
+        `<td class="units-parent-cell">${parentCell}</td>` +
         childCells +
         `</tr>`
     }
