@@ -595,7 +595,7 @@
   </main>
 
   <!-- ── 맨 위로 버튼 ─────────────────────────────────────── -->
-  <button class="scroll-top-btn" x-show="showScrollTop" @click="scrollToTop()" title="맨 위로">↑</button>
+  <button id="scroll-top-btn" class="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="맨 위로">↑</button>
 
   <!-- ── 소관업무 팝업 ──────────────────────────────────────── -->
   <div class="unit-detail-overlay" x-show="unitDetail" @click.self="unitDetail=null">
@@ -629,5 +629,13 @@
   </div>
 
 </div>
+  <script>
+    (function() {
+      var btn = document.getElementById('scroll-top-btn')
+      window.addEventListener('scroll', function() {
+        btn.style.display = window.scrollY > 400 ? 'flex' : 'none'
+      }, { passive: true })
+    })()
+  </script>
 </body>
 </html>
