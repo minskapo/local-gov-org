@@ -582,6 +582,17 @@ button { cursor: pointer; font: inherit; }
   .units-filter-input { max-width: 100%; }
 }
 
+/* ── 맨 위로 버튼 ────────────────────────────────────────── */
+.scroll-top-btn {
+  position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 400;
+  width: 2.6rem; height: 2.6rem; border-radius: 50%;
+  background: var(--clr-primary); color: #fff;
+  border: none; font-size: 1.1rem; font-weight: 700;
+  cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.2);
+  transition: opacity .2s, transform .2s;
+}
+.scroll-top-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,.25); }
+
 /* ── 기후환경 부서 현황 ──────────────────────────────────── */
 .climate-view { max-width: 1200px; }
 .climate-view h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: .75rem; }

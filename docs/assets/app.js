@@ -55,6 +55,9 @@ Alpine.data('mainApp', () => ({
   climateDepts: null,
   climateFilter: { gw: '', level: '', type: '' },
 
+  // ── 스크롤 ───────────────────────────────────────────────
+  showScrollTop: false,
+
   // ── 헤더 검색 ────────────────────────────────────────────
   searchQuery: '',
   searchResults: [],
@@ -250,10 +253,12 @@ Alpine.data('mainApp', () => ({
     }
     const apply = () => this._applyRoute(parseHash(location.hash))
     window.addEventListener('hashchange', apply)
+    window.addEventListener('scroll', () => { this.showScrollTop = window.scrollY > 400 }, { passive: true })
     apply()
   },
 
   navigate(path) { location.hash = '#' + path },
+  scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }) },
 
   async _applyRoute({ view, code }) {
     this.loading = false
