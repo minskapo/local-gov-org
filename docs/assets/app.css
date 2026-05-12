@@ -578,7 +578,7 @@ button { cursor: pointer; font: inherit; }
   .gwangyeok-section { flex-direction: column; }
   .gw-section-card { flex: none; width: 100%; }
   .kws-region-name { flex: 0 0 70px; }
-  .units-table-wrap { max-height: calc(100vh - 280px); }
+  .units-table-wrap { max-height: none; }
   .units-filter-input { max-width: 100%; }
 }
 

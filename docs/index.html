@@ -444,28 +444,27 @@
       <!-- 필터 -->
       <div class="units-filters">
         <select class="units-filter-sel" x-model="unitsFilter.gw"
-          @change="unitsFilter.gi=''; applyUnitsFilter()">
+          @change="unitsFilter.gi=''">
           <option value="">광역 전체</option>
           <template x-for="opt in unitsGwOptions" :key="opt">
             <option :value="opt" x-text="opt"></option>
           </template>
         </select>
         <select class="units-filter-sel" x-model="unitsFilter.gi"
-          :disabled="!unitsGiOptions.length" @change="applyUnitsFilter()">
+          :disabled="!unitsGiOptions.length">
           <option value="">기초 전체</option>
           <template x-for="opt in unitsGiOptions" :key="opt.code">
             <option :value="opt.code" x-text="opt.label"></option>
           </template>
         </select>
-        <select class="units-filter-sel" x-model="unitsFilter.type"
-          @change="applyUnitsFilter()">
+        <select class="units-filter-sel" x-model="unitsFilter.type">
           <option value="">기구유형 전체</option>
           <template x-for="t in typeOrder" :key="t">
             <option :value="t" x-text="t"></option>
           </template>
         </select>
         <input class="units-filter-input" type="text" placeholder="상위기구명 검색…"
-          x-model="unitsFilter.name" @input="applyUnitsFilter()">
+          x-model.debounce.300ms="unitsFilter.name">
         <span class="units-count" x-show="unitsRows.length">
           <strong x-text="unitsFiltered.length.toLocaleString()"></strong>개 기구
         </span>
@@ -535,14 +534,6 @@
               </tbody>
             </table>
           </div>
-          <template x-if="unitsTruncated">
-            <div class="units-loadmore">
-              <button class="units-loadmore-btn" @click="loadMoreUnits()">
-                더 보기 (<span x-text="Math.min(500, unitsRemaining).toLocaleString()"></span>개 추가 /
-                잔여 <span x-text="unitsRemaining.toLocaleString()"></span>개)
-              </button>
-            </div>
-          </template>
         </div>
       </template>
     </div><!-- /units -->

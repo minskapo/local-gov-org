@@ -48,10 +48,6 @@ Alpine.data('mainApp', () => ({
   unitsFilter: { gw: '', gi: '', type: '', name: '' },
   unitsSortCol: '',
   unitsSortDir: 1,
-  unitsDisplayCount: 500,
-  unitsDisplayRows: [],
-  unitsTruncated: false,
-  unitsRemaining: 0,
   unitDetail: null,
 
   // ── 기후환경 부서 현황 ────────────────────────────────────
@@ -181,6 +177,14 @@ Alpine.data('mainApp', () => ({
     return [...rows].sort((a, b) => {
       const av = a[col] || '', bv = b[col] || ''
       return av < bv ? -dir : av > bv ? dir : 0
+    })
+  },
+  get unitsDisplayRows() {
+    let lastCode = null
+    return this.unitsFiltered.map(row => {
+      const showRegion = row.code !== lastCode
+      lastCode = row.code
+      return { ...row, showRegion }
     })
   },
   get unitsMaxChildren() {
@@ -318,30 +322,12 @@ Alpine.data('mainApp', () => ({
       })
     }
     this.unitsRows = rows
-    this._syncUnitsDisplay()
   },
-  _syncUnitsDisplay() {
-    const all = this.unitsFiltered
-    const count = this.unitsDisplayCount
-    this.unitsTruncated = all.length > count
-    this.unitsRemaining = Math.max(0, all.length - count)
-    let lastCode = null
-    this.unitsDisplayRows = all.slice(0, count).map(row => {
-      const showRegion = row.code !== lastCode
-      lastCode = row.code
-      return { ...row, showRegion }
-    })
-  },
-  applyUnitsFilter() { this.unitsDisplayCount = 500; this._syncUnitsDisplay() },
-  loadMoreUnits() { this.unitsDisplayCount += 500; this._syncUnitsDisplay() },
   showUnitDetail(unit) { if (unit) this.unitDetail = unit },
   sortUnits(col) {
     if (this.unitsSortCol === col) this.unitsSortDir *= -1
     else { this.unitsSortCol = col; this.unitsSortDir = 1 }
-    this._syncUnitsDisplay()
   },
-  prevUnitsPage() { if (this.unitsPage > 0) this.unitsPage-- },
-  nextUnitsPage() { if (this.unitsPage < this.unitsTotalPages - 1) this.unitsPage++ },
 
   // ── 트리 선택 ─────────────────────────────────────────────
   selectUnit(unit, parent = null) {
