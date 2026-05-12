@@ -354,7 +354,7 @@ Alpine.data('mainApp', () => ({
           } else {
             inner = `<span class="unit-link">${esc(c.name)}</span>`
           }
-          childCells += `<td class="units-child-cell">${inner}</td>`
+          childCells += `<td class="units-child-cell"><div class="units-name-cap">${inner}</div></td>`
         } else {
           childCells += `<td class="units-child-cell"></td>`
         }
@@ -363,7 +363,7 @@ Alpine.data('mainApp', () => ({
         `<td class="units-gw-cell">${showRegion ? esc(row.gwName) : ''}</td>` +
         `<td class="units-gi-cell">${showRegion ? esc(row.giName) : ''}</td>` +
         `<td><span class="type-badge badge-${esc(row.parentType)}">${esc(row.parentType)}</span></td>` +
-        `<td class="units-parent-cell">${parentCell}</td>` +
+        `<td><div class="units-name-cap">${parentCell}</div></td>` +
         childCells +
         `</tr>`
     }
