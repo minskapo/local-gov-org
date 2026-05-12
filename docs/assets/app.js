@@ -51,7 +51,7 @@ Alpine.data('mainApp', () => ({
   _unitsDetailItems: [],
   unitDetail: null,
 
-  // ── 기후환경 부서 현황 ────────────────────────────────────
+  // ── 탄소중립 주무부서 현황 ────────────────────────────────────
   climateDepts: null,
   climateFilter: { gw: '', level: '', type: '' },
 
@@ -187,7 +187,7 @@ Alpine.data('mainApp', () => ({
     return Array.from({ length: this.unitsMaxChildren }, (_, i) => i)
   },
 
-  // ── 기후환경 부서 현황 computed ───────────────────────────
+  // ── 탄소중립 주무부서 현황 computed ───────────────────────────
   get climateGwOptions() {
     const seen = new Set()
     return (this.climateDepts || []).filter(r => !seen.has(r.gw) && seen.add(r.gw)).map(r => r.gw)

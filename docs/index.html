@@ -26,7 +26,7 @@
       <a :class="{active: view==='units'}"
          href="#/units" @click.prevent="navigate('/units')">전체 기구 현황</a>
       <a :class="{active: view==='climate'}"
-         href="#/climate" @click.prevent="navigate('/climate')">기후환경 부서 현황</a>
+         href="#/climate" @click.prevent="navigate('/climate')">탄소중립 주무부서 현황</a>
     </nav>
     <div class="search-wrap" @click.outside="searchOpen=false">
       <input class="search-input" type="search" placeholder="지자체·기구명 검색…"
@@ -501,9 +501,9 @@
       </div>
     </div><!-- /units -->
 
-    <!-- ════ 기후환경 부서 현황 ════ -->
+    <!-- ════ 탄소중립 주무부서 현황 ════ -->
     <div x-show="view==='climate'" class="climate-view">
-      <h2>기후환경 부서 현황</h2>
+      <h2>탄소중립 주무부서 현황</h2>
 
       <!-- 필터 -->
       <div class="units-filters">
