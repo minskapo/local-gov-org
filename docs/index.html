@@ -576,25 +576,23 @@
       </div>
 
       <!-- 통계 -->
-      <template x-if="climateDepts">
-        <div class="climate-stats-wrap">
-          <div class="climate-stats-row">
-            <span class="climate-stat-label">상위기구 유형</span>
-            <template x-for="item in climateStats.parentTypeList" :key="item.label">
-              <span class="climate-type-badge"
-                    :class="item.label==='기후환경 단독' ? 'cbadge-green' : item.label==='타 영역 혼합' ? 'cbadge-amber' : 'cbadge-gray'">
-                <span x-text="item.label"></span> <strong x-text="item.count + '개'"></strong>
-              </span>
-            </template>
-          </div>
-          <div class="climate-stats-row">
-            <span class="climate-stat-label">부서특성</span>
-            <template x-for="item in climateStats.deptKwList" :key="item.kw">
-              <span class="climate-kw-tag"><span x-text="item.kw"></span> <strong x-text="item.count + '개'"></strong></span>
-            </template>
-          </div>
+      <div class="climate-stats-wrap" x-show="climateDepts">
+        <div class="climate-stats-row">
+          <span class="climate-stat-label">상위기구 유형</span>
+          <template x-for="item in climateParentTypeList" :key="item.label">
+            <span class="climate-type-badge"
+                  :class="item.label==='기후환경 단독' ? 'cbadge-green' : item.label==='타 영역 혼합' ? 'cbadge-amber' : 'cbadge-gray'">
+              <span x-text="item.label"></span>&nbsp;<strong x-text="item.count + '개'"></strong>
+            </span>
+          </template>
         </div>
-      </template>
+        <div class="climate-stats-row">
+          <span class="climate-stat-label">부서특성</span>
+          <template x-for="item in climateDeptKwList" :key="item.kw">
+            <span class="climate-kw-tag"><span x-text="item.kw"></span>&nbsp;<strong x-text="item.count + '개'"></strong></span>
+          </template>
+        </div>
+      </div>
 
       <!-- 로딩 안내 -->
       <template x-if="!climateDepts && !loading">
